@@ -1,0 +1,27 @@
+Permissio
+
+Permission score 0 out of 100 (critical)
+Workflows scanned 1
+Jobs scanned 4
+Jobs with write-all 2
+Jobs missing explicit permissions 0
+Jobs with recommended changes 4
+High findings 18
+
+Top findings
+
+Workflow grants permissions: write-all (.github/workflows/risky.yml)
+artifact-metadata write was declared but no attestation action was detected (.github/workflows/risky.yml inspect)
+attestations write was declared but no attestation action was detected (.github/workflows/risky.yml inspect)
+id-token write was declared but no OIDC, cloud auth, or attestation use was detected (.github/workflows/risky.yml inspect)
+packages write was declared but no package publish or ghcr push was detected (.github/workflows/risky.yml inspect)
+
+Showing top 5 findings.
+Use --format markdown or --show-snippets for details.
+
+Suggested snippet
+
+jobs:
+  inspect:
+    permissions:
+      contents: read

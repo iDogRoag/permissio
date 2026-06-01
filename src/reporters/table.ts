@@ -1,9 +1,10 @@
 import pc from "picocolors";
-import type { Finding, ScanReport } from "../types.js";
+import type { Finding, JobResult, ScanReport } from "../types.js";
 
 export interface TableReporterOptions {
   showSnippets?: boolean;
   quiet?: boolean;
+  badge?: boolean;
 }
 
 export function renderTable(report: ScanReport, options: TableReporterOptions = {}): string {
@@ -14,58 +15,73 @@ export function renderTable(report: ScanReport, options: TableReporterOptions = 
   }
 
   if (!options.quiet) {
-    lines.push(
-      `permissio scanned ${report.summary.filesScanned} file(s), ${report.summary.workflowsScanned} workflow(s), ${report.summary.jobsScanned} job(s)`
-    );
-    lines.push(
-      `findings: ${pc.red(String(report.summary.high))} high, ${pc.yellow(String(report.summary.medium))} medium, ${pc.cyan(String(report.summary.low))} low`
-    );
+    lines.push(pc.bold("Permissio"));
+    lines.push("");
+    lines.push(`Permission score ${scoreColor(report.score.value)} out of 100 (${report.score.label})`);
+    lines.push(`Workflows scanned ${report.summary.workflowsScanned}`);
+    lines.push(`Jobs scanned ${report.summary.jobsScanned}`);
+    lines.push(`Jobs with write-all ${report.summary.jobsWithWriteAll}`);
+    lines.push(`Jobs missing explicit permissions ${report.summary.jobsMissingExplicitPermissions}`);
+    lines.push(`Jobs with recommended changes ${report.summary.jobsWithRecommendedChanges}`);
+    lines.push(`High findings ${report.summary.high}`);
+
+    if (options.badge && report.badge) {
+      lines.push("");
+      lines.push(report.badge.markdown);
+    }
+
     lines.push("");
   }
 
   if (report.workflows.length === 0) {
-    lines.push("No workflow files found.");
+    lines.push("No GitHub Actions workflows found.");
+    lines.push("Permissio scans .github/workflows by default.");
+    lines.push("Try permissio demo to see an example report.");
     return `${lines.join("\n")}\n`;
   }
 
-  for (const workflow of report.workflows) {
-    lines.push(workflow.filePath);
-
-    for (const job of workflow.jobs) {
-      lines.push(`  job ${job.jobId}${job.jobName ? ` (${job.jobName})` : ""}`);
-      lines.push(`    current      ${job.current.summary}`);
-      lines.push(`    recommended ${job.recommended.summary}`);
-      lines.push(`    findings     ${formatFindings(job.findings)}`);
-      lines.push(`    reasons      ${job.reasons.map((reason) => reason.reason).join("; ") || "none detected"}`);
-
-      if (options.showSnippets) {
-        lines.push("    snippet");
-        for (const snippetLine of job.snippet.split("\n")) {
-          lines.push(`      ${snippetLine}`);
-        }
-      }
+  if (report.findings.length > 0) {
+    lines.push("Top findings");
+    lines.push("");
+    for (const finding of report.findings.slice(0, 5)) {
+      lines.push(formatFinding(finding));
     }
 
-    const allContentsRead = workflow.jobs.length > 0 && workflow.jobs.every((job) => {
-      const permissions = job.recommended.permissions;
-      const keys = Object.keys(permissions);
-      return keys.length === 1 && permissions.contents === "read";
-    });
+    if (report.findings.length > 5) {
+      lines.push("");
+      lines.push("Showing top 5 findings.");
+      lines.push("Use --format markdown or --show-snippets for details.");
+    }
+  } else {
+    lines.push("Top findings");
+    lines.push("");
+    lines.push("No findings.");
+  }
 
-    if (allContentsRead) {
-      lines.push("  note workflow-level contents read is acceptable for this workflow");
+  const snippetJob = firstJobWithRecommendedChanges(report);
+  if (snippetJob) {
+    lines.push("");
+    lines.push("Suggested snippet");
+    lines.push("");
+    lines.push(snippetJob.snippet);
+  }
+
+  if (options.showSnippets) {
+    lines.push("");
+    lines.push("All snippets");
+    for (const job of report.workflows.flatMap((workflow) => workflow.jobs).filter((job) => job.hasRecommendedChanges)) {
+      lines.push("");
+      lines.push(`${job.filePath} ${job.jobId}`);
+      lines.push(job.snippet);
     }
   }
 
   return `${lines.join("\n")}\n`;
 }
 
-function formatFindings(findings: Finding[]): string {
-  if (findings.length === 0) {
-    return "none";
-  }
-
-  return findings.map((finding) => `${finding.severity} ${finding.message}`).join("; ");
+function formatFinding(finding: Finding): string {
+  const location = [finding.filePath, finding.jobId].filter(Boolean).join(" ");
+  return `${finding.message}${location ? ` (${location})` : ""}`;
 }
 
 function renderQuietFindings(report: ScanReport): string {
@@ -79,4 +95,25 @@ function renderQuietFindings(report: ScanReport): string {
       return `${finding.severity} ${finding.message}${location ? ` (${location})` : ""}`;
     })
     .join("\n")}\n`;
+}
+
+function firstJobWithRecommendedChanges(report: ScanReport): JobResult | undefined {
+  return report.workflows.flatMap((workflow) => workflow.jobs).find((job) => job.hasRecommendedChanges);
+}
+
+function scoreColor(value: number): string {
+  const text = String(value);
+  if (value >= 90) {
+    return pc.green(text);
+  }
+
+  if (value >= 70) {
+    return pc.yellow(text);
+  }
+
+  if (value >= 50) {
+    return pc.yellow(text);
+  }
+
+  return pc.red(text);
 }

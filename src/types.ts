@@ -123,15 +123,39 @@ export interface ScanSummary {
   filesScanned: number;
   workflowsScanned: number;
   jobsScanned: number;
+  jobsWithWriteAll: number;
+  jobsMissingExplicitPermissions: number;
   high: number;
   medium: number;
   low: number;
   jobsWithRecommendedChanges: number;
 }
 
+export interface ScorePenalty {
+  id: string;
+  points: number;
+  reason: string;
+  filePath: string;
+  jobId?: string;
+}
+
+export interface PermissionScore {
+  value: number;
+  label: "strong" | "good" | "risky" | "critical";
+  penalties: ScorePenalty[];
+}
+
+export interface BadgeSummary {
+  markdown: string;
+  label: string;
+  color: string;
+}
+
 export interface ScanReport {
   schemaVersion: "1.0";
   summary: ScanSummary;
+  score: PermissionScore;
+  badge?: BadgeSummary;
   workflows: WorkflowResult[];
   findings: Finding[];
 }

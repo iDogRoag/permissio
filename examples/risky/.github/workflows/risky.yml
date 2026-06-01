@@ -1,0 +1,35 @@
+name: Risky
+
+on:
+  pull_request_target:
+
+permissions: write-all
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - run: echo "inspect"
+
+  token:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - run: echo "token not needed here"
+
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "build only"
+
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no token needed"

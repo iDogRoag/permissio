@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command, CommanderError } from "commander";
 import { scanPath } from "./index.js";
+import { renderHtml } from "./reporters/html.js";
 import { renderJson } from "./reporters/json.js";
 import { renderMarkdown } from "./reporters/markdown.js";
 import { renderTable } from "./reporters/table.js";
+import { withBadge } from "./score.js";
 import type { ScanReport } from "./types.js";
 
-type Format = "table" | "json" | "markdown";
+type Format = "table" | "json" | "markdown" | "html";
 type FailOn = "none" | "high" | "changes";
 
 interface CheckOptions {
@@ -18,6 +21,8 @@ interface CheckOptions {
   showSnippets: boolean;
   include: string[];
   quiet: boolean;
+  badge: boolean;
+  output?: string;
 }
 
 interface Io {
@@ -26,7 +31,8 @@ interface Io {
   writeErr: (value: string) => void;
 }
 
-const validFormats = new Set(["table", "json", "markdown"]);
+const validFormats = new Set(["table", "json", "markdown", "html"]);
+const validDemoFormats = new Set(["table", "json", "markdown", "html"]);
 const validFailOn = new Set(["none", "high", "changes"]);
 const version = readPackageVersion();
 
@@ -36,7 +42,7 @@ export async function runCli(argv = process.argv.slice(2), io: Io = defaultIo())
 
   program
     .name("permissio")
-    .description("Recommend least-privilege GitHub Actions GITHUB_TOKEN permissions.")
+    .description("GitHub Actions permission minimizer for least-privilege GITHUB_TOKEN settings.")
     .version(version)
     .exitOverride()
     .configureOutput({
@@ -47,13 +53,26 @@ export async function runCli(argv = process.argv.slice(2), io: Io = defaultIo())
   program
     .command("check [path]")
     .description("Scan GitHub Actions workflows in a directory.")
-    .option("--format <format>", "Output format: table, json, or markdown", "table")
+    .option("--format <format>", "Output format: table, json, markdown, or html", "table")
     .option("--fail-on <policy>", "Exit 1 on high findings or recommended changes: none, high, changes", "none")
     .option("--show-snippets", "Show copy-paste YAML snippets for each job", false)
     .option("--include <glob>", "Optional extra workflow glob", collect, [])
     .option("--quiet", "Only print findings, not intro text", false)
+    .option("--output <file>", "Write report output to a file")
+    .option("--badge", "Print badge Markdown after the summary", false)
     .action(async (targetPath = ".", options) => {
       exitCode = await runCheckCommand(targetPath, normalizeOptions(options), io);
+    });
+
+  program
+    .command("demo")
+    .description("Scan a bundled risky workflow example.")
+    .option("--format <format>", "Output format: table, json, markdown, or html", "table")
+    .option("--show-snippets", "Show copy-paste YAML snippets for each job", false)
+    .option("--output <file>", "Write report output to a file")
+    .option("--badge", "Print badge Markdown after the summary", false)
+    .action(async (options) => {
+      exitCode = await runDemoCommand(normalizeOptions({ ...options, failOn: "none", include: [] }), io);
     });
 
   try {
@@ -88,15 +107,46 @@ export async function runCheckCommand(targetPath: string, options: CheckOptions,
     return 2;
   }
 
-  if (options.format === "json") {
-    io.writeOut(renderJson(report));
-  } else if (options.format === "markdown") {
-    io.writeOut(renderMarkdown(report, { showSnippets: options.showSnippets }));
+  if (options.badge) {
+    report = withBadge(report);
+  }
+
+  const rendered = renderReport(report, options);
+  if (options.output) {
+    await writeOutputFile(io.cwd, options.output, rendered);
   } else {
-    io.writeOut(renderTable(report, { showSnippets: options.showSnippets, quiet: options.quiet }));
+    io.writeOut(rendered);
   }
 
   return exitCodeFor(report, options.failOn);
+}
+
+export async function runDemoCommand(options: CheckOptions, io: Io = defaultIo()): Promise<number> {
+  if (!validDemoFormats.has(options.format)) {
+    io.writeErr(`permissio: invalid --format "${options.format}"\n`);
+    return 2;
+  }
+
+  let report: ScanReport;
+  try {
+    report = await scanPath(demoPath());
+  } catch (error) {
+    io.writeErr(`permissio: ${error instanceof Error ? error.message : String(error)}\n`);
+    return 2;
+  }
+
+  if (options.badge) {
+    report = withBadge(report);
+  }
+
+  const rendered = renderReport(report, options);
+  if (options.output) {
+    await writeOutputFile(io.cwd, options.output, rendered);
+  } else {
+    io.writeOut(rendered);
+  }
+
+  return 0;
 }
 
 function exitCodeFor(report: ScanReport, failOn: FailOn): number {
@@ -117,7 +167,9 @@ function normalizeOptions(options: Record<string, unknown>): CheckOptions {
     failOn: String(options.failOn ?? "none") as FailOn,
     showSnippets: Boolean(options.showSnippets),
     include: Array.isArray(options.include) ? options.include.map(String) : [],
-    quiet: Boolean(options.quiet)
+    quiet: Boolean(options.quiet),
+    badge: Boolean(options.badge),
+    output: typeof options.output === "string" ? options.output : undefined
   };
 }
 
@@ -127,6 +179,32 @@ function collect(value: string, previous: string[]): string[] {
 
 function resolveFromCwd(cwd: string, targetPath: string): string {
   return path.resolve(cwd, targetPath);
+}
+
+function renderReport(report: ScanReport, options: CheckOptions): string {
+  if (options.format === "json") {
+    return renderJson(report);
+  }
+
+  if (options.format === "markdown") {
+    return renderMarkdown(report, { showSnippets: options.showSnippets, badge: options.badge });
+  }
+
+  if (options.format === "html") {
+    return renderHtml(report);
+  }
+
+  return renderTable(report, { showSnippets: options.showSnippets, quiet: options.quiet, badge: options.badge });
+}
+
+async function writeOutputFile(cwd: string, outputPath: string, value: string): Promise<void> {
+  const resolved = resolveFromCwd(cwd, outputPath);
+  await mkdir(path.dirname(resolved), { recursive: true });
+  await writeFile(resolved, value, "utf8");
+}
+
+function demoPath(): string {
+  return fileURLToPath(new URL("../examples/risky", import.meta.url));
 }
 
 function defaultIo(): Io {

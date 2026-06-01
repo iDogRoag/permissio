@@ -3,18 +3,22 @@ import { discoverWorkflowFiles } from "./discover.js";
 import { withFindingCategory, withWorkflowFindingCategories } from "./findings.js";
 import { parseWorkflowFile } from "./parser.js";
 import { analyzeWorkflow } from "./rules.js";
+import { computeScore } from "./score.js";
 import type { Finding, ScanOptions, ScanReport, ScanSummary, WorkflowResult } from "./types.js";
 
 export type {
   Finding,
   FindingCategory,
+  BadgeSummary,
   JobResult,
   ParsedJob,
   ParsedStep,
   ParsedWorkflow,
   PermissionLevel,
   PermissionScope,
+  PermissionScore,
   ScanReport,
+  ScorePenalty,
   WorkflowResult
 } from "./types.js";
 
@@ -51,6 +55,8 @@ export async function scanPath(targetPath = ".", options: ScanOptions = {}): Pro
     filesScanned: files.length,
     workflowsScanned: sortedWorkflows.length,
     jobsScanned: jobs.length,
+    jobsWithWriteAll: jobs.filter((job) => job.current.kind === "write-all").length,
+    jobsMissingExplicitPermissions: jobs.filter((job) => job.current.source === "implicit").length,
     high: sortedFindings.filter((finding) => finding.severity === "high").length,
     medium: sortedFindings.filter((finding) => finding.severity === "medium").length,
     low: sortedFindings.filter((finding) => finding.severity === "low").length,
@@ -60,6 +66,7 @@ export async function scanPath(targetPath = ".", options: ScanOptions = {}): Pro
   return {
     schemaVersion: "1.0",
     summary,
+    score: computeScore(sortedFindings),
     workflows: sortedWorkflows,
     findings: sortedFindings
   };
