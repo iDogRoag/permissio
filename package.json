@@ -50,7 +50,7 @@
     "access": "public"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "commander": "^15.0.0",
     "fast-glob": "^3.3.2",
     "picocolors": "^1.1.1",
     "yaml": "^2.6.1"
