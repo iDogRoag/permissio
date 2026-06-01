@@ -2,12 +2,13 @@
 
 All notable changes to permissio will be documented in this file.
 
-## Unreleased
+## 0.2.0 - 2026-06-01
 
 - Added `permissio demo` with table, Markdown, JSON, and HTML output.
 - Added permission score and optional badge Markdown output.
 - Added bundled examples, demo assets, launch docs, share copy, and good first issue seeds.
 - Polished README and contributor docs for launch readiness.
+- Published the scoped npm package as `@idogroag/permissio`.
 
 ## 0.1.0 - 2026-06-01
 

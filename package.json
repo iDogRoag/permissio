@@ -1,6 +1,6 @@
 {
   "name": "@idogroag/permissio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "GitHub Actions permission minimizer for least privilege GITHUB_TOKEN settings.",
   "type": "module",
   "license": "MIT",
@@ -60,7 +60,8 @@
   ],
   "author": "iDogRoag",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "dependencies": {
     "commander": "^15.0.0",

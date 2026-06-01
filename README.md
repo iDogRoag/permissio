@@ -8,11 +8,11 @@ Permissio scans `.github/workflows` and recommends the smallest likely `GITHUB_T
 It helps replace implicit defaults, `read-all`, `write-all`, and broad workflow-level permissions with clear job-level permissions.
 
 ```sh
-npx permissio check .
+npx @idogroag/permissio check .
 ```
 
 ```sh
-npx permissio demo
+npx @idogroag/permissio demo
 ```
 
 ```txt
@@ -43,11 +43,11 @@ jobs:
 ```
 
 ```sh
-npx permissio demo --format html --output permissio-demo.html
+npx @idogroag/permissio demo --format html --output permissio-demo.html
 ```
 
 Terminal GIF coming soon.
-Run `npx permissio demo` to see the same output locally.
+Run `npx @idogroag/permissio demo` to see the same output locally.
 
 ## What is Permissio
 
@@ -66,7 +66,7 @@ Permissio helps teams review and reduce the token permissions available to each 
 ## Quickstart
 
 ```sh
-npx permissio check .
+npx @idogroag/permissio check .
 ```
 
 Common options:
@@ -85,12 +85,12 @@ permissio check --fail-on high
 The demo command scans a bundled risky example, so you can try Permissio before pointing it at a repo.
 
 ```sh
-npx permissio demo
-npx permissio demo --format markdown
-npx permissio demo --format json
-npx permissio demo --format html --output permissio-demo.html
-npx permissio demo --show-snippets
-npx permissio demo --badge
+npx @idogroag/permissio demo
+npx @idogroag/permissio demo --format markdown
+npx @idogroag/permissio demo --format json
+npx @idogroag/permissio demo --format html --output permissio-demo.html
+npx @idogroag/permissio demo --show-snippets
+npx @idogroag/permissio demo --badge
 ```
 
 Demo assets:
@@ -178,7 +178,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - run: npm install --no-save github:iDogRoag/permissio
+      - run: npm install --no-save @idogroag/permissio
       - run: ./node_modules/.bin/permissio check --format markdown --fail-on high
 ```
 
@@ -194,16 +194,14 @@ Use them together.
 
 The CLI binary is `permissio`, but the npm package is scoped as `@idogroag/permissio` because the unscoped `permissio` registry name is owned by another project.
 
-After the scoped package is published to npm:
-
 ```sh
 npm install --save-dev @idogroag/permissio
 ```
 
-Until then, install from GitHub:
+You can also run it without installing:
 
 ```sh
-npm install --save-dev github:iDogRoag/permissio
+npx @idogroag/permissio demo
 ```
 
 For local development:
