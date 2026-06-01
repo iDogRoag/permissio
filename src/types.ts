@@ -24,6 +24,7 @@ export type PermissionKind = "missing" | "empty" | "read-all" | "write-all" | "m
 export type PermissionSource = "implicit" | "workflow" | "job";
 export type Confidence = "high" | "medium" | "low";
 export type Severity = "high" | "medium" | "low";
+export type FindingCategory = "parse" | "permissions" | "pull-request-target" | "rules";
 
 export type ParsedPermissions =
   | { kind: "missing"; raw?: undefined }
@@ -67,6 +68,7 @@ export interface ParsedWorkflow {
 
 export interface Finding {
   id: string;
+  category?: FindingCategory;
   severity: Severity;
   message: string;
   filePath: string;
@@ -128,6 +130,7 @@ export interface ScanSummary {
 }
 
 export interface ScanReport {
+  schemaVersion: "1.0";
   summary: ScanSummary;
   workflows: WorkflowResult[];
   findings: Finding[];

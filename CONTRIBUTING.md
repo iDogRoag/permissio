@@ -4,13 +4,15 @@ Thanks for helping improve permissio.
 
 ## Development
 
-Use Node.js 20.
+Use Node.js 22.13 or newer. Node 24 is the default local development version.
 
 ```sh
 npm install
 npm run check
+npm run lint
 npm test
 npm run build
+npm run pack:check
 ```
 
 ## Rule Changes
@@ -28,8 +30,10 @@ Every new rule should include:
 Before opening a pull request:
 
 - run `npm run check`
+- run `npm run lint`
 - run `npm test`
 - run `npm run build`
+- run `npm run pack:check`
 - avoid committing `dist`, `node_modules`, coverage, or local logs
 
 ## Reporting False Positives

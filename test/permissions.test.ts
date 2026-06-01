@@ -60,6 +60,31 @@ describe("permission inference", () => {
     expect(report.findings.some((finding) => finding.id === "pull-request-target.checkout-head-with-write")).toBe(true);
   });
 
+  it("flags implicit pull_request_target permissions as write-risk", async () => {
+    const report = await scanPath(fixtures, { include: ["pull-request-target-implicit.yml"] });
+
+    expect(report.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "permissions.missing-explicit",
+          category: "permissions",
+          severity: "high"
+        }),
+        expect.objectContaining({
+          id: "pull-request-target.write-permissions",
+          category: "pull-request-target",
+          severity: "high",
+          evidence: "implicit pull_request_target default"
+        }),
+        expect.objectContaining({
+          id: "pull-request-target.checkout-head-with-write",
+          category: "pull-request-target",
+          severity: "high"
+        })
+      ])
+    );
+  });
+
   it("flags id-token write without OIDC or attestation use", async () => {
     const report = await scanPath(fixtures, { include: ["risky.yml"] });
 
@@ -72,6 +97,7 @@ describe("permission inference", () => {
     expect(report.summary.filesScanned).toBe(1);
     expect(report.summary.workflowsScanned).toBe(0);
     expect(report.findings[0]?.id).toBe("parse.invalid-yaml");
+    expect(report.findings[0]?.category).toBe("parse");
   });
 });
 

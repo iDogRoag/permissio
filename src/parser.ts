@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import YAML from "yaml";
+import { withFindingCategory } from "./findings.js";
 import { parsePermissions } from "./permissions.js";
 import type { Finding, ParsedJob, ParsedStep, ParsedWorkflow } from "./types.js";
 
@@ -41,7 +42,7 @@ export function parseWorkflowSource(filePath: string, sourceText: string): Parse
       filePath,
       evidence: doc.errors[0]?.message
     });
-    return { findings };
+    return { findings: findings.map(withFindingCategory) };
   }
 
   const raw = doc.toJS({ mapAsMap: false });
@@ -52,7 +53,7 @@ export function parseWorkflowSource(filePath: string, sourceText: string): Parse
       message: "Workflow file does not contain a YAML object",
       filePath
     });
-    return { findings };
+    return { findings: findings.map(withFindingCategory) };
   }
 
   const workflow: ParsedWorkflow = {
@@ -65,7 +66,7 @@ export function parseWorkflowSource(filePath: string, sourceText: string): Parse
     sourceText
   };
 
-  return { workflow, findings };
+  return { workflow, findings: findings.map(withFindingCategory) };
 }
 
 function parseJobs(value: unknown): ParsedJob[] {

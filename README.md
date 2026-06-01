@@ -10,7 +10,15 @@ It does not call the GitHub API, use AI, require a token, or modify files by def
 
 ## Install
 
-The `permissio` npm registry name is currently occupied by an unrelated package. Until registry ownership is resolved, install this project from GitHub after the repository is public:
+The CLI binary is `permissio`, but the npm package is scoped as `@idogroag/permissio` because the unscoped `permissio` registry name is owned by another project.
+
+After the scoped package is published to npm:
+
+```sh
+npm install --save-dev @idogroag/permissio
+```
+
+Until then, install from GitHub:
 
 ```sh
 npm install --save-dev github:iDogRoag/permissio
@@ -38,7 +46,7 @@ permissio check --fail-on changes
 permissio check --show-snippets
 ```
 
-The default path is the current working directory. The MVP expects a directory path and scans `.github/workflows/*.{yml,yaml}` by default.
+The default path is the current working directory. permissio scans `.github/workflows/*.{yml,yaml}` by default and accepts extra globs through `--include`.
 
 ## Options
 
@@ -86,7 +94,7 @@ jobs:
 
 ## GitHub Actions Usage
 
-This does not need to be a marketplace action. Until npm registry ownership is resolved, install it from GitHub before running the binary:
+This does not need to be a marketplace action. Until the scoped package is published to npm, install it from GitHub before running the binary:
 
 ```yaml
 name: Check GitHub Actions permissions
@@ -107,14 +115,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
       - run: npm install --no-save github:iDogRoag/permissio
       - run: ./node_modules/.bin/permissio check --format markdown --fail-on high
 ```
 
 ## What It Detects
 
-permissio uses deterministic static rules for common GitHub Actions permission needs:
+permissio uses deterministic static rules for common GitHub Actions permission needs. See [docs/rules.md](docs/rules.md) for the full rule reference.
 
 - `actions/checkout` -> `contents: read`
 - GitHub Pages deployment -> `pages: write`, `id-token: write`
@@ -140,7 +148,7 @@ permissio is static analysis, not a formal proof. It does not:
 - perfectly parse every possible shell command
 - auto-edit workflow files
 
-The npm package name `permissio` is not currently owned by this project. Avoid `npx permissio` unless the registry ownership has been resolved; otherwise npm may run an unrelated package.
+The unscoped npm package name `permissio` is not owned by this project. Avoid `npx permissio`; install `@idogroag/permissio` after it is published, or install from GitHub and run the local binary.
 
 When permissions are missing, permissio reports an implicit default and recommends explicit job-level permissions. It intentionally does not try to model org or repo default settings.
 
@@ -150,6 +158,7 @@ JSON output has a stable top-level shape:
 
 ```json
 {
+  "schemaVersion": "1.0",
   "summary": {
     "filesScanned": 0,
     "workflowsScanned": 0,
@@ -177,17 +186,23 @@ Each job includes:
 - `snippet`
 - `hasRecommendedChanges`
 
+Each finding includes `id`, `category`, `severity`, `message`, and location fields. Categories are `parse`, `permissions`, `pull-request-target`, and `rules`, so YAML parse failures can be separated from security findings in CI.
+
 ## Safety
 
-permissio recommends likely least-privilege permissions. Review every recommendation before applying it, especially for complex scripts or third-party actions. The MVP does not implement `--fix`; copy-paste snippets are printed only when requested.
+permissio recommends likely least-privilege permissions. Review every recommendation before applying it, especially for complex scripts or third-party actions. It does not implement `--fix`; copy-paste snippets are printed only when requested.
 
 ## Development
+
+Use Node.js 22.13 or newer. The local default is Node 24, and CI tests Node 22.13 plus Node 24.
 
 ```sh
 npm install
 npm run check
+npm run lint
 npm test
 npm run build
+npm run pack:check
 ```
 
 Useful local checks:

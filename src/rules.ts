@@ -1,4 +1,29 @@
 import {
+  checksOutPullRequestHead,
+  firstLine,
+  hasGenericOidcSignal,
+  isActionsWrite,
+  isChecksWrite,
+  isDeploymentsWrite,
+  isDiscussionWrite,
+  isIssueRead,
+  isIssueWrite,
+  isKnownCloudAuth,
+  isPullRequestRead,
+  isPullRequestWrite,
+  isReleaseStep,
+  isStatusesWrite,
+  isUnknownThirdPartyAction,
+  jobPushesGhcr,
+  jobText,
+  lower,
+  normalizeUses,
+  stepText,
+  stringValue,
+  withTruthy
+} from "./action-patterns.js";
+import { withFindingCategory } from "./findings.js";
+import {
   currentSummary,
   expandPermissions,
   hasAnyRecommendedWrite,
@@ -15,7 +40,6 @@ import type {
   JobResult,
   ParsedJob,
   ParsedPermissions,
-  ParsedStep,
   ParsedWorkflow,
   PermissionLevel,
   PermissionScope,
@@ -81,7 +105,7 @@ export function analyzeWorkflow(workflow: ParsedWorkflow): WorkflowResult {
     addRiskFindings(findings, workflow, job, result, inference, pullRequestTarget);
     return {
       ...result,
-      findings: sortFindings(findings)
+      findings: sortFindings(findings).map(withFindingCategory)
     };
   });
 
@@ -89,7 +113,7 @@ export function analyzeWorkflow(workflow: ParsedWorkflow): WorkflowResult {
     filePath: workflow.filePath,
     workflowName: workflow.name,
     jobs: jobs.sort((a, b) => a.jobId.localeCompare(b.jobId)),
-    findings: sortFindings(workflowFindings)
+    findings: sortFindings(workflowFindings).map(withFindingCategory)
   };
 }
 
@@ -139,7 +163,7 @@ function buildJobResult(workflow: ParsedWorkflow, job: ParsedJob): JobResult {
     current,
     recommended,
     reasons: sortReasons(inference.reasons),
-    findings: sortFindings(findings),
+    findings: sortFindings(findings).map(withFindingCategory),
     snippet: toSnippet(job.id, inference.recommendations),
     hasRecommendedChanges: hasRecommendedChanges(
       currentPermissions.permissions.kind,
@@ -170,13 +194,19 @@ function addRiskFindings(
   }
 
   if (result.current.source === "implicit") {
+    const missingExplicitSeverity = pullRequestTarget ? "high" : "medium";
+    const missingExplicitMessage = pullRequestTarget
+      ? "No explicit permissions at workflow or job level; pull_request_target receives a read/write repository token by default"
+      : "No explicit permissions at workflow or job level";
+
     findings.push({
       id: "permissions.missing-explicit",
-      severity: "medium",
-      message: "No explicit permissions at workflow or job level",
+      severity: missingExplicitSeverity,
+      message: missingExplicitMessage,
       filePath: workflow.filePath,
       workflowName: workflow.name,
-      jobId: job.id
+      jobId: job.id,
+      evidence: pullRequestTarget ? "on: pull_request_target" : undefined
     });
   }
 
@@ -306,25 +336,29 @@ function addRiskFindings(
   }
 
   if (pullRequestTarget) {
-    if (result.current.kind === "write-all" || hasAnyWrite(current)) {
+    const writePermissionsAvailable = pullRequestTargetHasWriteRisk(result);
+
+    if (writePermissionsAvailable) {
       findings.push({
         id: "pull-request-target.write-permissions",
         severity: "high",
         message: "pull_request_target workflow has write permissions",
         filePath: workflow.filePath,
         workflowName: workflow.name,
-        jobId: job.id
+        jobId: job.id,
+        evidence: result.current.source === "implicit" ? "implicit pull_request_target default" : undefined
       });
     }
 
-    if (checksOutPullRequestHead(job) && hasAnyWrite(current)) {
+    if (checksOutPullRequestHead(job) && writePermissionsAvailable) {
       findings.push({
         id: "pull-request-target.checkout-head-with-write",
         severity: "high",
         message: "pull_request_target job checks out pull request head while write permissions are available",
         filePath: workflow.filePath,
         workflowName: workflow.name,
-        jobId: job.id
+        jobId: job.id,
+        evidence: result.current.source === "implicit" ? "implicit pull_request_target default" : undefined
       });
     }
 
@@ -552,178 +586,12 @@ function addUnknownScopeFindings(
   }
 }
 
-function jobPushesGhcr(job: ParsedJob): boolean {
-  return job.steps.some((step) => {
-    const uses = normalizeUses(step.uses);
-    const text = lower(stepText(step));
-    return (
-      (uses === "docker/build-push-action" && withTruthy(step.with, "push") && text.includes("ghcr.io")) ||
-      /\bdocker\s+push\s+ghcr\.io\//.test(text)
-    );
-  });
-}
-
-function checksOutPullRequestHead(job: ParsedJob): boolean {
-  return job.steps.some((step) => {
-    if (normalizeUses(step.uses) !== "actions/checkout") {
-      return false;
-    }
-
-    const text = lower(JSON.stringify(step.with ?? {}));
-    return text.includes("pull_request.head") || text.includes("github.head_ref") || text.includes("refs/pull");
-  });
-}
-
-function isKnownCloudAuth(uses: string, text: string): boolean {
-  if (uses === "aws-actions/configure-aws-credentials") {
-    return true;
-  }
-
-  if (uses === "google-github-actions/auth" || uses === "azure/login") {
-    return true;
-  }
-
-  return uses === "hashicorp/vault-action" && text.includes("jwt");
-}
-
-function hasGenericOidcSignal(text: string): boolean {
-  return /\b(id-token|oidc|openid connect)\b/.test(text);
-}
-
-function isReleaseStep(uses: string, text: string): boolean {
-  return (
-    uses === "softprops/action-gh-release" ||
-    uses === "ncipollo/release-action" ||
-    uses === "actions/create-release" ||
-    uses === "actions/upload-release-asset" ||
-    /\bgh\s+release\s+(create|upload)\b/.test(text) ||
-    (text.includes("/releases") && hasHttpWriteVerb(text))
-  );
-}
-
-function isIssueWrite(text: string, script: string): boolean {
-  return (
-    /\bgh\s+issue\s+(create|comment|edit|close|reopen|lock|unlock)\b/.test(text) ||
-    (text.includes("/issues") && hasHttpWriteVerb(text)) ||
-    /github\.rest\.issues\.(create|update|addlabels|createlabel|createcomment|lock|unlock|remove)/.test(script)
-  );
-}
-
-function isIssueRead(text: string, script: string): boolean {
-  return /\bgh\s+issue\s+(list|view)\b/.test(text) || /github\.rest\.issues\.(list|get)/.test(script);
-}
-
-function isPullRequestWrite(text: string, script: string): boolean {
-  return (
-    /\bgh\s+pr\s+(create|comment|edit|merge|close|ready|review)\b/.test(text) ||
-    (text.includes("/pulls") && hasHttpWriteVerb(text)) ||
-    /github\.rest\.pulls\.(create|update|merge|requestreviewers|createreview)/.test(script)
-  );
-}
-
-function isPullRequestRead(text: string, script: string): boolean {
-  return /\bgh\s+pr\s+(list|view|diff|checks)\b/.test(text) || /github\.rest\.pulls\.(list|get)/.test(script);
-}
-
-function isChecksWrite(text: string, script: string): boolean {
-  return (
-    text.includes("/check-runs") ||
-    /github\.rest\.checks\.(create|update)/.test(script)
-  );
-}
-
-function isStatusesWrite(text: string, script: string): boolean {
-  return text.includes("/statuses") || script.includes("github.rest.repos.createcommitstatus");
-}
-
-function isDeploymentsWrite(text: string, script: string): boolean {
-  return (
-    (text.includes("/deployments") && hasHttpWriteVerb(text)) ||
-    /github\.rest\.repos\.createdeployment/.test(script)
-  );
-}
-
-function isActionsWrite(text: string): boolean {
-  return (
-    /\bgh\s+workflow\s+run\b/.test(text) ||
-    /\bgh\s+run\s+(cancel|rerun|delete)\b/.test(text) ||
-    text.includes("/dispatches") ||
-    text.includes("/rerun") ||
-    text.includes("/cancel")
-  );
-}
-
-function isDiscussionWrite(text: string, script: string): boolean {
-  return (
-    /(create|edit|delete|lock|unlock|comment).{0,24}discussion/.test(text) ||
-    /(create|edit|delete|lock|unlock|comment).{0,24}discussion/.test(script)
-  );
-}
-
-function hasHttpWriteVerb(text: string): boolean {
-  return /\b(post|patch|put|delete)\b/.test(text) || /-x\s+(post|patch|put|delete)\b/.test(text);
-}
-
-function isUnknownThirdPartyAction(uses: string): boolean {
-  if (uses.startsWith("actions/")) {
-    return false;
-  }
-
-  const known = [
-    "aws-actions/configure-aws-credentials",
-    "google-github-actions/auth",
-    "azure/login",
-    "hashicorp/vault-action",
-    "docker/build-push-action",
-    "softprops/action-gh-release",
-    "ncipollo/release-action",
-    "peter-evans/create-pull-request",
-    "github/codeql-action/upload-sarif"
-  ];
-
-  return !known.includes(uses);
-}
-
-function normalizeUses(value: string | undefined): string {
-  if (!value) {
-    return "";
-  }
-  return value.split("@")[0]?.toLowerCase() ?? "";
-}
-
-function withTruthy(value: Record<string, unknown> | undefined, key: string): boolean {
-  if (!value) {
-    return false;
-  }
-
-  const raw = value[key];
-  return raw === true || (typeof raw === "string" && raw.toLowerCase() === "true");
-}
-
-function jobText(job: ParsedJob): string {
-  return JSON.stringify(job.raw);
-}
-
-function stepText(step: ParsedStep): string {
-  return [step.uses, step.run, JSON.stringify(step.with ?? {}), JSON.stringify(step.env ?? {})]
-    .filter(Boolean)
-    .join("\n");
-}
-
-function stringValue(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-function firstLine(value: string | undefined): string {
-  return (value ?? "").split(/\r?\n/)[0]?.trim() ?? "";
-}
-
-function lower(value: string): string {
-  return value.toLowerCase();
-}
-
 function isBroadOrImplicit(result: JobResult): boolean {
   return result.current.source === "implicit" || result.current.kind === "read-all" || result.current.kind === "write-all" || hasAnyWrite(result.current.permissions);
+}
+
+function pullRequestTargetHasWriteRisk(result: JobResult): boolean {
+  return result.current.source === "implicit" || result.current.kind === "write-all" || hasAnyWrite(result.current.permissions);
 }
 
 function sortReasons(reasons: RecommendationReason[]): RecommendationReason[] {

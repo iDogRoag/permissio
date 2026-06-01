@@ -22,6 +22,7 @@ describe("cli", () => {
 
     expect(code).toBe(0);
     const parsed = JSON.parse(output.join(""));
+    expect(parsed.schemaVersion).toBe("1.0");
     expect(parsed.summary.filesScanned).toBe(1);
     expect(parsed.workflows[0].jobs).toHaveLength(2);
     expect(parsed.workflows[0].filePath).toBe("basic.yml");
@@ -84,6 +85,7 @@ describe("cli", () => {
     const report = await scanPath(fixtures, { include: ["basic.yml"] });
     const parsed = JSON.parse(renderJson(report));
 
+    expect(parsed.schemaVersion).toBe("1.0");
     expect(parsed.summary.jobsScanned).toBe(2);
   });
 

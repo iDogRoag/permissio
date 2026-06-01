@@ -1,11 +1,13 @@
 import path from "node:path";
 import { discoverWorkflowFiles } from "./discover.js";
+import { withFindingCategory, withWorkflowFindingCategories } from "./findings.js";
 import { parseWorkflowFile } from "./parser.js";
 import { analyzeWorkflow } from "./rules.js";
 import type { Finding, ScanOptions, ScanReport, ScanSummary, WorkflowResult } from "./types.js";
 
 export type {
   Finding,
+  FindingCategory,
   JobResult,
   ParsedJob,
   ParsedStep,
@@ -29,11 +31,11 @@ export async function scanPath(targetPath = ".", options: ScanOptions = {}): Pro
   for (const file of files) {
     const displayPath = toDisplayPath(root, file);
     const parsed = await parseWorkflowFile(file);
-    findings.push(...parsed.findings.map((finding) => ({ ...finding, filePath: displayPath })));
+    findings.push(...parsed.findings.map((finding) => withFindingCategory({ ...finding, filePath: displayPath })));
 
     if (parsed.workflow) {
       parsed.workflow.filePath = displayPath;
-      const workflow = analyzeWorkflow(parsed.workflow);
+      const workflow = withWorkflowFindingCategories(analyzeWorkflow(parsed.workflow));
       workflows.push(workflow);
       findings.push(...workflow.findings);
       for (const job of workflow.jobs) {
@@ -56,6 +58,7 @@ export async function scanPath(targetPath = ".", options: ScanOptions = {}): Pro
   };
 
   return {
+    schemaVersion: "1.0",
     summary,
     workflows: sortedWorkflows,
     findings: sortedFindings

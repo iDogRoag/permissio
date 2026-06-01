@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command, CommanderError } from "commander";
@@ -27,7 +28,7 @@ interface Io {
 
 const validFormats = new Set(["table", "json", "markdown"]);
 const validFailOn = new Set(["none", "high", "changes"]);
-const version = "0.1.0";
+const version = readPackageVersion();
 
 export async function runCli(argv = process.argv.slice(2), io: Io = defaultIo()): Promise<number> {
   let exitCode = 0;
@@ -134,6 +135,17 @@ function defaultIo(): Io {
     writeOut: (value) => process.stdout.write(value),
     writeErr: (value) => process.stderr.write(value)
   };
+}
+
+function readPackageVersion(): string {
+  try {
+    const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+      version?: unknown;
+    };
+    return typeof manifest.version === "string" ? manifest.version : "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

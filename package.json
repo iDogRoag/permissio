@@ -1,5 +1,5 @@
 {
-  "name": "permissio",
+  "name": "@idogroag/permissio",
   "version": "0.1.0",
   "description": "Static analyzer for least-privilege GitHub Actions GITHUB_TOKEN permissions.",
   "type": "module",
@@ -26,15 +26,18 @@
   },
   "files": [
     "dist",
+    "docs",
     "README.md",
     "LICENSE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "build": "tsup src/cli.ts src/index.ts --format esm --dts --clean --splitting false",
     "check": "tsc --noEmit",
+    "lint": "eslint .",
+    "pack:check": "npm pack --dry-run",
     "prepare": "npm run build",
     "test": "vitest run"
   },
@@ -50,15 +53,19 @@
     "access": "public"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "commander": "^15.0.0",
     "fast-glob": "^3.3.2",
     "picocolors": "^1.1.1",
     "yaml": "^2.6.1"
   },
   "devDependencies": {
-    "@types/node": "^20.17.6",
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^22.19.0",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
+    "typescript-eslint": "^8.48.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   }
