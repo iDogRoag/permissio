@@ -17,8 +17,8 @@ Permissio is a focused permissions minimizer, not a full GitHub Actions security
 Try it:
 
 ```sh
-npx permissio demo
-npx permissio check .
+npx @idogroag/permissio demo
+npx @idogroag/permissio check .
 ```
 
 ## Reddit post
@@ -30,7 +30,7 @@ It is meant for workflows that still rely on implicit defaults, `read-all`, `wri
 Demo:
 
 ```sh
-npx permissio demo
+npx @idogroag/permissio demo
 ```
 
 I am looking for real-world workflow examples that produce false positives or missing recommendations.
@@ -43,7 +43,7 @@ It scans `.github/workflows` and recommends explicit job-level `GITHUB_TOKEN` pe
 
 Runs offline. No GitHub API. No AI. Focused on permissions, not a full security scanner.
 
-`npx permissio demo`
+`npx @idogroag/permissio demo`
 
 ## LinkedIn post
 

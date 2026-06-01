@@ -73,8 +73,8 @@ describe("launch features", () => {
 
   it("keeps launch docs and README promises in place", async () => {
     const readme = await readFile(path.join(process.cwd(), "README.md"), "utf8");
-    expect(readme).toContain("npx permissio check .");
-    expect(readme).toContain("npx permissio demo");
+    expect(readme).toContain("npx @idogroag/permissio check .");
+    expect(readme).toContain("npx @idogroag/permissio demo");
     expect(readme).toContain("## How Permissio is different");
     expect(readme).toContain("static analysis");
     expect(readme).toContain("does not call the GitHub API by default");
