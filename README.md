@@ -137,16 +137,13 @@ permissio uses deterministic static rules for common GitHub Actions permission n
 
 Recommendations are sorted deterministically so JSON output is stable for CI.
 
-## What It Does Not Detect
+## Safety Boundaries
 
-permissio is static analysis, not a formal proof. It does not:
+permissio is offline and read-only. It does not call the GitHub API, require credentials, execute workflow code, or modify files.
 
-- call the GitHub API
-- inspect repository or organization default token settings
-- execute workflows or shell scripts
-- infer behavior inside remote reusable workflows
-- perfectly parse every possible shell command
-- auto-edit workflow files
+## Analysis Limits
+
+Because permissio uses static rules, it may miss behavior hidden inside complex shell scripts, remote reusable workflows, organization settings, or third-party actions it does not recognize.
 
 The unscoped npm package name `permissio` is not owned by this project. Avoid `npx permissio`; install `@idogroag/permissio` after it is published, or install from GitHub and run the local binary.
 
