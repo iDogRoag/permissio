@@ -16,7 +16,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "permissio": "./dist/cli.js"
+    "permissio": "dist/cli.js"
   },
   "exports": {
     ".": {
