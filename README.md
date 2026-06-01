@@ -1,12 +1,194 @@
-# permissio
+# Permissio
 
-permissio is a static analyzer for GitHub Actions permissions. It scans workflow files and suggests explicit least-privilege `GITHUB_TOKEN` permissions for each job.
+Least privilege for GitHub Actions tokens in one command.
+
+Find overly broad GitHub Actions permissions and replace them with explicit least privilege settings.
+
+Permissio scans `.github/workflows` and recommends the smallest likely `GITHUB_TOKEN` permissions for each job.
+It helps replace implicit defaults, `read-all`, `write-all`, and broad workflow-level permissions with clear job-level permissions.
+
+```sh
+npx permissio check .
+```
+
+```sh
+npx permissio demo
+```
+
+```txt
+Permissio
+
+Permission score 54 out of 100
+Workflows scanned 3
+Jobs scanned 8
+Jobs with write-all 1
+Jobs missing explicit permissions 5
+Jobs with recommended changes 6
+High findings 2
+
+Top findings
+
+write-all used at workflow level
+pull_request_target has write permissions
+id-token write is set but no OIDC use was detected
+contents write appears broader than needed
+job can use permissions: {}
+
+Suggested snippet
+
+jobs:
+  test:
+    permissions:
+      contents: read
+```
+
+```sh
+npx permissio demo --format html --output permissio-demo.html
+```
+
+Terminal GIF coming soon.
+Run `npx permissio demo` to see the same output locally.
+
+## What is Permissio
+
+Permissio is a focused static analyzer for GitHub Actions `GITHUB_TOKEN` permissions.
+It scans workflow YAML and recommends explicit job-level `permissions` blocks such as `contents: read`, `pages: write`, `id-token: write`, or `permissions: {}`.
+
+Permissio is not a full GitHub Actions security scanner, and it does not prove that a workflow is safe.
 
 ## Why this exists
 
-Many GitHub Actions workflows have no explicit permissions, use `read-all`, use `write-all`, or grant write permissions at the workflow level when only one job needs them. permissio helps maintainers replace broad or implicit permissions with recommended, inferred, job-level permissions.
+Many GitHub Actions workflows still rely on implicit token defaults, `read-all`, `write-all`, or workflow-level write permissions when only one job needs them.
+Those broad defaults make CI/CD permissions harder to review.
 
-It does not call the GitHub API, use AI, require a token, or modify files by default.
+Permissio helps teams review and reduce the token permissions available to each job.
+
+## Quickstart
+
+```sh
+npx permissio check .
+```
+
+Common options:
+
+```sh
+permissio check --show-snippets
+permissio check --format markdown
+permissio check --format json
+permissio check --format html --output permissio-report.html
+permissio check --badge
+permissio check --fail-on high
+```
+
+## Demo
+
+The demo command scans a bundled risky example, so you can try Permissio before pointing it at a repo.
+
+```sh
+npx permissio demo
+npx permissio demo --format markdown
+npx permissio demo --format json
+npx permissio demo --format html --output permissio-demo.html
+npx permissio demo --show-snippets
+npx permissio demo --badge
+```
+
+Demo assets:
+
+- [Terminal output](docs/assets/demo-output.txt)
+- [Markdown output](docs/assets/demo-output.md)
+- [HTML report](docs/assets/demo-report.html)
+
+## Example output
+
+```txt
+Permissio
+
+Permission score 54 out of 100
+Workflows scanned 3
+Jobs scanned 8
+Jobs with write-all 1
+Jobs missing explicit permissions 5
+Jobs with recommended changes 6
+High findings 2
+
+Top findings
+
+write-all used at workflow level
+pull_request_target has write permissions
+id-token write is set but no OIDC use was detected
+contents write appears broader than needed
+job can use permissions: {}
+
+Suggested snippet
+
+jobs:
+  test:
+    permissions:
+      contents: read
+```
+
+## What it detects
+
+Permissio uses deterministic static rules for common GitHub Actions permission needs. See [docs/rules.md](docs/rules.md) for the full rule reference.
+
+- `actions/checkout` -> `contents: read`
+- GitHub Pages deployment -> `pages: write`, `id-token: write`
+- artifact attestations -> `attestations: write`, `artifact-metadata: write`, `id-token: write`, `contents: read`
+- OIDC cloud authentication -> `id-token: write`
+- GitHub Packages and `ghcr.io` publishing -> `packages: write`
+- release creation or asset upload -> `contents: write`
+- issue and pull request writes -> `issues: write` or `pull-requests: write`
+- checks, statuses, deployments, security events, actions, discussions, models, and vulnerability alert reads
+- risky `pull_request_target` permission patterns
+- broad `write-all`, broad `read-all`, implicit permissions, unknown scopes, and unknown third-party actions
+
+## How recommendations work
+
+Permissio infers the smallest likely permission set from workflow structure, known actions, and recognizable command patterns.
+Recommendations are conservative and explainable: every inferred permission includes a reason and evidence.
+
+When no `GITHUB_TOKEN` permission appears necessary, Permissio recommends:
+
+```yaml
+permissions: {}
+```
+
+Review every recommendation before applying it, especially for complex scripts or third-party actions.
+
+## GitHub Actions usage
+
+```yaml
+name: Check GitHub Actions permissions
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  permissio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npm install --no-save github:iDogRoag/permissio
+      - run: ./node_modules/.bin/permissio check --format markdown --fail-on high
+```
+
+## How Permissio is different
+
+zizmor is a GitHub Actions security linter.
+StepSecurity Harden Runner focuses on runtime hardening and egress control.
+Permissio is a focused static analyzer for GITHUB_TOKEN permissions.
+
+Use them together.
 
 ## Install
 
@@ -33,30 +215,14 @@ npm install
 npm run build
 ```
 
-## Usage
+## Configuration
+
+Permissio scans `.github/workflows/*.{yml,yaml}` by default.
+Use `--include` to add extra workflow globs:
 
 ```sh
-permissio check
-permissio check .
-permissio check ./my-repo
-permissio check --format json
-permissio check --format markdown
-permissio check --fail-on high
-permissio check --fail-on changes
-permissio check --show-snippets
+permissio check . --include "examples/**/*.yml"
 ```
-
-The default path is the current working directory. permissio scans `.github/workflows/*.{yml,yaml}` by default and accepts extra globs through `--include`.
-
-## Options
-
-| Flag | Default | Description |
-| --- | --- | --- |
-| `--format table\|json\|markdown` | `table` | Output format. |
-| `--fail-on none\|high\|changes` | `none` | Exit `1` for high findings or any recommended changes. |
-| `--show-snippets` | `false` | Print copy-paste YAML snippets for job-level permissions. |
-| `--include "glob"` | none | Add extra workflow globs. |
-| `--quiet` | `false` | Only print findings, not intro text. |
 
 Exit codes:
 
@@ -64,162 +230,98 @@ Exit codes:
 - `1`: findings triggered `--fail-on high` or `--fail-on changes`
 - `2`: internal error, invalid CLI input, or unreadable workflow file
 
-## Example Output
+If no workflows are found, Permissio exits `0` by default and suggests `permissio demo`.
 
-```txt
-.github/workflows/ci.yml
-  job test
-    current      implicit default
-    recommended permissions: contents read
-    findings     medium No explicit permissions at workflow or job level
-    reasons      checkout needs repository contents
+## Report formats
+
+```sh
+permissio check --format table
+permissio check --format markdown
+permissio check --format json
+permissio check --format html --output permissio-report.html
 ```
 
-With `--show-snippets`:
+JSON output includes a stable top-level `schemaVersion`, `summary`, `score`, `workflows`, and `findings`.
+Each finding includes `id`, `category`, `severity`, `message`, and location fields.
 
-```yaml
-jobs:
-  test:
-    permissions:
-      contents: read
+Permissio can print badge Markdown, but it does not host badges in v1.
+
+```sh
+permissio check --badge
 ```
 
-For a job that appears to need no token permissions:
+## Permission score
 
-```yaml
-jobs:
-  lint:
-    permissions: {}
-```
+The permission score is a heuristic from `0` to `100`, not proof of safety.
+It starts at `100` and subtracts points for broad or risky permission patterns.
 
-## GitHub Actions Usage
+Labels:
 
-This does not need to be a marketplace action. Until the scoped package is published to npm, install it from GitHub before running the binary:
+- `90` to `100`: strong
+- `70` to `89`: good
+- `50` to `69`: risky
+- `0` to `49`: critical
 
-```yaml
-name: Check GitHub Actions permissions
-
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-
-permissions:
-  contents: read
-
-jobs:
-  permissio:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - run: npm install --no-save github:iDogRoag/permissio
-      - run: ./node_modules/.bin/permissio check --format markdown --fail-on high
-```
-
-## What It Detects
-
-permissio uses deterministic static rules for common GitHub Actions permission needs. See [docs/rules.md](docs/rules.md) for the full rule reference.
-
-- `actions/checkout` -> `contents: read`
-- GitHub Pages deployment -> `pages: write`, `id-token: write`
-- artifact attestations -> `attestations: write`, `artifact-metadata: write`, `id-token: write`, `contents: read`
-- OIDC cloud authentication -> `id-token: write`
-- GitHub Packages and `ghcr.io` publishing -> `packages: write`
-- release creation/upload -> `contents: write`
-- issue and pull request writes -> `issues: write` or `pull-requests: write`
-- checks, statuses, deployments, security events, actions, discussions, models, and vulnerability alert reads
-- risky `pull_request_target` permission patterns
-- broad `write-all`, broad `read-all`, implicit permissions, unknown scopes, and unknown third-party actions
-
-Recommendations are sorted deterministically so JSON output is stable for CI.
-
-## Safety Boundaries
-
-permissio is offline and read-only. It does not call the GitHub API, require credentials, execute workflow code, or modify files.
-
-## Analysis Limits
-
-Because permissio uses static rules, it may miss behavior hidden inside complex shell scripts, remote reusable workflows, organization settings, or third-party actions it does not recognize.
-
-The unscoped npm package name `permissio` is not owned by this project. Avoid `npx permissio`; install `@idogroag/permissio` after it is published, or install from GitHub and run the local binary.
-
-When permissions are missing, permissio reports an implicit default and recommends explicit job-level permissions. It intentionally does not try to model org or repo default settings.
-
-## JSON Shape
-
-JSON output has a stable top-level shape:
+JSON output includes:
 
 ```json
 {
-  "schemaVersion": "1.0",
-  "summary": {
-    "filesScanned": 0,
-    "workflowsScanned": 0,
-    "jobsScanned": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "jobsWithRecommendedChanges": 0
-  },
-  "workflows": [],
-  "findings": []
+  "score": {
+    "value": 54,
+    "label": "risky",
+    "penalties": []
+  }
 }
 ```
 
-Each job includes:
+With `--badge`, JSON also includes:
 
-- `filePath`
-- `workflowName`
-- `jobId`
-- `jobName`
-- `current`
-- `recommended`
-- `reasons`
-- `findings`
-- `snippet`
-- `hasRecommendedChanges`
-
-Each finding includes `id`, `category`, `severity`, `message`, and location fields. Categories are `parse`, `permissions`, `pull-request-target`, and `rules`, so YAML parse failures can be separated from security findings in CI.
-
-## Safety
-
-permissio recommends likely least-privilege permissions. Review every recommendation before applying it, especially for complex scripts or third-party actions. It does not implement `--fix`; copy-paste snippets are printed only when requested.
-
-## Development
-
-Use Node.js 22.13 or newer. The local default is Node 24, and CI tests Node 22.13 plus Node 24.
-
-```sh
-npm install
-npm run check
-npm run lint
-npm test
-npm run build
-npm run pack:check
+```json
+{
+  "badge": {
+    "markdown": "![permissio score](https://img.shields.io/badge/permissio-54%2F100-orange)",
+    "label": "permissio 54/100",
+    "color": "orange"
+  }
+}
 ```
 
-Useful local checks:
+## Security model
 
-```sh
-node dist/cli.js check test/fixtures --include "*.yml" --format json
-node dist/cli.js check . --show-snippets
-```
+Permissio is offline and read-only.
+It does not call the GitHub API by default, require credentials, execute workflows, run shell scripts, or modify files.
+
+## Limitations
+
+Because Permissio uses static analysis, it may miss behavior hidden inside complex shell scripts, remote reusable workflows, organization settings, or third-party actions it does not recognize.
+It intentionally does not try to model repository or organization default token settings.
 
 ## Roadmap
 
-- `--fix` with comment-preserving YAML edits
-- more rules for popular third-party actions
+- Autofix mode
+- PR comment mode
 - SARIF output
-- stricter JSON schema documentation
-- baseline mode for gradual adoption
+- GitHub App
+- Organization-wide scan
+- Integration with gha-bom
+- Integration with zizmor output
+- More third-party action permission rules
+- Reusable workflow permission analysis
+- VS Code extension
+- Hosted badge service
 
 ## Contributing
 
 Issues and pull requests are welcome. New rules should be deterministic, explainable, and covered by fixtures.
+
+## Good first contributions
+
+- Add a new permission inference rule
+- Improve `pull_request_target` detection
+- Add fixtures for real world workflows
+- Improve Markdown report formatting
+- Add detection for another release action
+- Add tests for unusual YAML forms
 
 ## License
 

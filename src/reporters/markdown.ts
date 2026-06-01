@@ -2,6 +2,7 @@ import type { ScanReport } from "../types.js";
 
 export interface MarkdownReporterOptions {
   showSnippets?: boolean;
+  badge?: boolean;
 }
 
 export function renderMarkdown(report: ScanReport, options: MarkdownReporterOptions = {}): string {
@@ -9,15 +10,23 @@ export function renderMarkdown(report: ScanReport, options: MarkdownReporterOpti
 
   lines.push("# permissio report");
   lines.push("");
-  lines.push("| Files | Workflows | Jobs | High | Medium | Low | Jobs with changes |");
-  lines.push("| ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+  lines.push(`**Permission score:** ${report.score.value} out of 100 (${report.score.label})`);
+  lines.push("");
+  if (options.badge && report.badge) {
+    lines.push(report.badge.markdown);
+    lines.push("");
+  }
+  lines.push("| Files | Workflows | Jobs | Write-all jobs | Missing explicit permissions | High | Medium | Low | Jobs with changes |");
+  lines.push("| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
   lines.push(
-    `| ${report.summary.filesScanned} | ${report.summary.workflowsScanned} | ${report.summary.jobsScanned} | ${report.summary.high} | ${report.summary.medium} | ${report.summary.low} | ${report.summary.jobsWithRecommendedChanges} |`
+    `| ${report.summary.filesScanned} | ${report.summary.workflowsScanned} | ${report.summary.jobsScanned} | ${report.summary.jobsWithWriteAll} | ${report.summary.jobsMissingExplicitPermissions} | ${report.summary.high} | ${report.summary.medium} | ${report.summary.low} | ${report.summary.jobsWithRecommendedChanges} |`
   );
 
   if (report.workflows.length === 0) {
     lines.push("");
-    lines.push("No workflow files found.");
+    lines.push("No GitHub Actions workflows found.");
+    lines.push("");
+    lines.push("Permissio scans `.github/workflows` by default. Try `permissio demo` to see an example report.");
     return `${lines.join("\n")}\n`;
   }
 

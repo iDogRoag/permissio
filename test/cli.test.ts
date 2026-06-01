@@ -75,7 +75,8 @@ describe("cli", () => {
       });
 
       expect(code).toBe(0);
-      expect(output.join("")).toContain("No workflow files found.");
+      expect(output.join("")).toContain("No GitHub Actions workflows found.");
+      expect(output.join("")).toContain("Try permissio demo to see an example report.");
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }

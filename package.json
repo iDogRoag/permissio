@@ -1,7 +1,7 @@
 {
   "name": "@idogroag/permissio",
   "version": "0.1.0",
-  "description": "Static analyzer for least-privilege GitHub Actions GITHUB_TOKEN permissions.",
+  "description": "GitHub Actions permission minimizer for least privilege GITHUB_TOKEN settings.",
   "type": "module",
   "license": "MIT",
   "private": false,
@@ -27,6 +27,8 @@
   "files": [
     "dist",
     "docs",
+    "examples",
+    "CHANGELOG.md",
     "README.md",
     "LICENSE"
   ],
@@ -39,14 +41,22 @@
     "lint": "eslint .",
     "pack:check": "npm pack --dry-run",
     "prepare": "npm run build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "npm run check"
   },
   "keywords": [
     "github-actions",
-    "permissions",
     "security",
     "least-privilege",
-    "cli"
+    "github-token",
+    "permissions",
+    "ci",
+    "cicd",
+    "devsecops",
+    "workflow",
+    "actions",
+    "static-analysis",
+    "developer-tools"
   ],
   "author": "iDogRoag",
   "publishConfig": {
