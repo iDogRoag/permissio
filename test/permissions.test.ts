@@ -1,0 +1,84 @@
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import { scanPath } from "../src/index.js";
+import type { JobResult } from "../src/types.js";
+
+const fixtures = path.join(process.cwd(), "test/fixtures");
+
+describe("permission inference", () => {
+  it("recommends contents read for checkout and permissions empty for no token use", async () => {
+    const report = await scanPath(fixtures, { include: ["basic.yml"] });
+    const testJob = job(report.workflows[0]?.jobs, "test");
+    const noopJob = job(report.workflows[0]?.jobs, "noop");
+
+    expect(testJob.recommended.permissions).toEqual({ contents: "read" });
+    expect(noopJob.recommended.permissions).toEqual({});
+    expect(noopJob.snippet).toContain("permissions: {}");
+  });
+
+  it("recommends contents write for release publishing", async () => {
+    const report = await scanPath(fixtures, { include: ["releases.yml"] });
+    const release = job(report.workflows[0]?.jobs, "release");
+
+    expect(release.recommended.permissions.contents).toBe("write");
+  });
+
+  it("recommends pages write and id-token write for Pages deployment", async () => {
+    const report = await scanPath(fixtures, { include: ["pages.yml"] });
+    const deploy = job(report.workflows[0]?.jobs, "deploy");
+    const build = job(report.workflows[0]?.jobs, "build");
+
+    expect(deploy.recommended.permissions.pages).toBe("write");
+    expect(deploy.recommended.permissions["id-token"]).toBe("write");
+    expect(build.recommended.permissions.contents).toBe("read");
+    expect(build.recommended.permissions.pages).toBeUndefined();
+  });
+
+  it("recommends attestations write, artifact-metadata write, id-token write, and contents read for attestations", async () => {
+    const report = await scanPath(fixtures, { include: ["attestations.yml"] });
+    const attest = job(report.workflows[0]?.jobs, "attest");
+
+    expect(attest.recommended.permissions.attestations).toBe("write");
+    expect(attest.recommended.permissions["artifact-metadata"]).toBe("write");
+    expect(attest.recommended.permissions["id-token"]).toBe("write");
+    expect(attest.recommended.permissions.contents).toBe("read");
+  });
+
+  it("recommends packages write and contents read for ghcr publishing", async () => {
+    const report = await scanPath(fixtures, { include: ["packages.yml"] });
+    const ghcr = job(report.workflows[0]?.jobs, "ghcr");
+
+    expect(ghcr.recommended.permissions.packages).toBe("write");
+    expect(ghcr.recommended.permissions.contents).toBe("read");
+  });
+
+  it("flags pull_request_target with write-all as high severity", async () => {
+    const report = await scanPath(fixtures, { include: ["risky.yml"] });
+
+    expect(report.summary.high).toBeGreaterThan(0);
+    expect(report.findings.some((finding) => finding.id === "permissions.workflow-write-all")).toBe(true);
+    expect(report.findings.some((finding) => finding.id === "pull-request-target.checkout-head-with-write")).toBe(true);
+  });
+
+  it("flags id-token write without OIDC or attestation use", async () => {
+    const report = await scanPath(fixtures, { include: ["risky.yml"] });
+
+    expect(report.findings.some((finding) => finding.id === "permissions.id-token-write-unneeded")).toBe(true);
+  });
+
+  it("keeps invalid YAML as a finding without crashing the scan", async () => {
+    const report = await scanPath(fixtures, { include: ["invalid.yml"] });
+
+    expect(report.summary.filesScanned).toBe(1);
+    expect(report.summary.workflowsScanned).toBe(0);
+    expect(report.findings[0]?.id).toBe("parse.invalid-yaml");
+  });
+});
+
+function job(jobs: JobResult[] | undefined, id: string): JobResult {
+  const found = jobs?.find((candidate) => candidate.jobId === id);
+  if (!found) {
+    throw new Error(`Missing job ${id}`);
+  }
+  return found;
+}

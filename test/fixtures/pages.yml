@@ -1,0 +1,19 @@
+name: Pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - run: npm run build
+
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/deploy-pages@v4

@@ -1,0 +1,65 @@
+{
+  "name": "permissio",
+  "version": "0.1.0",
+  "description": "Static analyzer for least-privilege GitHub Actions GITHUB_TOKEN permissions.",
+  "type": "module",
+  "license": "MIT",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iDogRoag/permissio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/iDogRoag/permissio/issues"
+  },
+  "homepage": "https://github.com/iDogRoag/permissio#readme",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "permissio": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup src/cli.ts src/index.ts --format esm --dts --clean --splitting false",
+    "check": "tsc --noEmit",
+    "prepare": "npm run build",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "github-actions",
+    "permissions",
+    "security",
+    "least-privilege",
+    "cli"
+  ],
+  "author": "iDogRoag",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "fast-glob": "^3.3.2",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.8"
+  }
+}

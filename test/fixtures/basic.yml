@@ -1,0 +1,16 @@
+name: Basic CI
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm test
+
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "hello"
