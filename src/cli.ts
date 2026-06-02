@@ -21,6 +21,7 @@ interface CheckOptions {
   showSnippets: boolean;
   include: string[];
   quiet: boolean;
+  ci: boolean;
   badge: boolean;
   output?: string;
 }
@@ -58,6 +59,7 @@ export async function runCli(argv = process.argv.slice(2), io: Io = defaultIo())
     .option("--show-snippets", "Show copy-paste YAML snippets for each job", false)
     .option("--include <glob>", "Optional extra workflow glob", collect, [])
     .option("--quiet", "Only print findings, not intro text", false)
+    .option("--ci", "CI-friendly mode; use with --fail-on to choose failure behavior", false)
     .option("--output <file>", "Write report output to a file")
     .option("--badge", "Print badge Markdown after the summary", false)
     .action(async (targetPath = ".", options) => {
@@ -168,6 +170,7 @@ function normalizeOptions(options: Record<string, unknown>): CheckOptions {
     showSnippets: Boolean(options.showSnippets),
     include: Array.isArray(options.include) ? options.include.map(String) : [],
     quiet: Boolean(options.quiet),
+    ci: Boolean(options.ci),
     badge: Boolean(options.badge),
     output: typeof options.output === "string" ? options.output : undefined
   };

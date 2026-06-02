@@ -1,6 +1,6 @@
 import path from "node:path";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
@@ -62,6 +62,40 @@ describe("cli", () => {
 
     expect(code).toBe(0);
     expect(output.join("")).toBe("");
+  });
+
+  it("accepts CI mode with markdown output and fail policy", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "permissio-ci-"));
+    const outputPath = path.join(tempDir, "permissio-report.md");
+    try {
+      const output: string[] = [];
+      const code = await runCli(
+        [
+          "check",
+          fixtures,
+          "--include",
+          "basic.yml",
+          "--ci",
+          "--format",
+          "markdown",
+          "--output",
+          outputPath,
+          "--fail-on",
+          "high"
+        ],
+        {
+          cwd: process.cwd(),
+          writeOut: (value) => output.push(value),
+          writeErr: (value) => output.push(value)
+        }
+      );
+
+      expect(code).toBe(0);
+      expect(output.join("")).toBe("");
+      expect(await readFile(outputPath, "utf8")).toContain("# permissio report");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 
   it("handles directories with no workflow files", async () => {
