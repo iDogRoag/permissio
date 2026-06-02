@@ -8,11 +8,11 @@ Permissio scans `.github/workflows` and recommends the smallest likely `GITHUB_T
 It helps replace implicit defaults, `read-all`, `write-all`, and broad workflow-level permissions with clear job-level permissions.
 
 ```sh
-npx @idogroag/permissio check .
+npx @idogee/permissio check .
 ```
 
 ```sh
-npx @idogroag/permissio demo
+npx @idogee/permissio demo
 ```
 
 ```txt
@@ -43,11 +43,11 @@ jobs:
 ```
 
 ```sh
-npx @idogroag/permissio demo --format html --output permissio-demo.html
+npx @idogee/permissio demo --format html --output permissio-demo.html
 ```
 
 Terminal GIF coming soon.
-Run `npx @idogroag/permissio demo` to see the same output locally.
+Run `npx @idogee/permissio demo` to see the same output locally.
 
 ## What is Permissio
 
@@ -66,7 +66,7 @@ Permissio helps teams review and reduce the token permissions available to each 
 ## Quickstart
 
 ```sh
-npx @idogroag/permissio check .
+npx @idogee/permissio check .
 ```
 
 Common options:
@@ -85,12 +85,12 @@ permissio check --fail-on high
 The demo command scans a bundled risky example, so you can try Permissio before pointing it at a repo.
 
 ```sh
-npx @idogroag/permissio demo
-npx @idogroag/permissio demo --format markdown
-npx @idogroag/permissio demo --format json
-npx @idogroag/permissio demo --format html --output permissio-demo.html
-npx @idogroag/permissio demo --show-snippets
-npx @idogroag/permissio demo --badge
+npx @idogee/permissio demo
+npx @idogee/permissio demo --format markdown
+npx @idogee/permissio demo --format json
+npx @idogee/permissio demo --format html --output permissio-demo.html
+npx @idogee/permissio demo --show-snippets
+npx @idogee/permissio demo --badge
 ```
 
 Demo assets:
@@ -178,8 +178,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - run: npm install --no-save @idogroag/permissio
-      - run: ./node_modules/.bin/permissio check --format markdown --fail-on high
+      - run: npx @idogee/permissio check . --ci --format markdown --output permissio-report.md --fail-on high
 ```
 
 ## How Permissio is different
@@ -192,16 +191,28 @@ Use them together.
 
 ## Install
 
-The CLI binary is `permissio`, but the npm package is scoped as `@idogroag/permissio` because the unscoped `permissio` registry name is owned by another project.
+The npm package is `@idogee/permissio`.
+The CLI binary remains `permissio`.
+
+For one-off runs without a local or global install:
 
 ```sh
-npm install --save-dev @idogroag/permissio
+npx @idogee/permissio check .
+npx @idogee/permissio demo
 ```
 
-You can also run it without installing:
+For a local dev dependency:
 
 ```sh
-npx @idogroag/permissio demo
+npm install --save-dev @idogee/permissio
+npx permissio check .
+```
+
+For a global install:
+
+```sh
+npm install -g @idogee/permissio
+permissio check .
 ```
 
 For local development:

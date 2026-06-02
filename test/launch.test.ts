@@ -73,8 +73,8 @@ describe("launch features", () => {
 
   it("keeps launch docs and README promises in place", async () => {
     const readme = await readFile(path.join(process.cwd(), "README.md"), "utf8");
-    expect(readme).toContain("npx @idogroag/permissio check .");
-    expect(readme).toContain("npx @idogroag/permissio demo");
+    expect(readme).toContain("npx @idogee/permissio check .");
+    expect(readme).toContain("npx @idogee/permissio demo");
     expect(readme).toContain("## How Permissio is different");
     expect(readme).toContain("static analysis");
     expect(readme).toContain("does not call the GitHub API by default");
@@ -102,6 +102,26 @@ describe("launch features", () => {
 
     const html = await run(["demo", "--format", "html"]);
     expect(html.output).toContain("Permission score");
+  });
+
+  it("keeps npm package identity and install docs aligned", async () => {
+    const packageJson = JSON.parse(await readFile(path.join(process.cwd(), "package.json"), "utf8"));
+    const readme = await readFile(path.join(process.cwd(), "README.md"), "utf8");
+    const publishCheck = await readFile(path.join(process.cwd(), "docs/npm-publish-check.md"), "utf8");
+    const releaseNotes = await readFile(path.join(process.cwd(), "docs/release-v0.2.0.md"), "utf8");
+
+    expect(packageJson.name).toBe("@idogee/permissio");
+    expect(packageJson.bin).toMatchObject({ permissio: "dist/cli.js" });
+    expect(readme).toContain("npx @idogee/permissio check .");
+    expect(readme).toContain("npx @idogee/permissio demo");
+    expect(readme).toContain("npm install --save-dev @idogee/permissio");
+    expect(readme).toContain(
+      "npx @idogee/permissio check . --ci --format markdown --output permissio-report.md --fail-on high"
+    );
+    expect(readme).not.toContain(["@idogroag", "permissio"].join("/"));
+    expect(publishCheck).toContain("npm publish --access public");
+    expect(releaseNotes).toContain("v0.2.0");
+    expect(releaseNotes).toContain("@idogee/permissio");
   });
 });
 
