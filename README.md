@@ -7,6 +7,8 @@ Find overly broad GitHub Actions permissions and replace them with explicit leas
 Permissio scans `.github/workflows` and recommends the smallest likely `GITHUB_TOKEN` permissions for each job.
 It helps replace implicit defaults, `read-all`, `write-all`, and broad workflow-level permissions with clear job-level permissions.
 
+![Permissio demo screenshot](docs/assets/demo.png)
+
 ```sh
 npx @idogee/permissio check .
 ```
@@ -46,8 +48,11 @@ jobs:
 npx @idogee/permissio demo --format html --output permissio-demo.html
 ```
 
-Terminal GIF coming soon.
-Run `npx @idogee/permissio demo` to see the same output locally.
+Preview the demo output:
+
+- Terminal output: [docs/assets/demo-output.txt](docs/assets/demo-output.txt)
+- Markdown report: [docs/assets/demo-output.md](docs/assets/demo-output.md)
+- HTML report: [docs/assets/demo-report.html](docs/assets/demo-report.html)
 
 ## What is Permissio
 
