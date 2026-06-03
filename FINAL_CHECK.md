@@ -91,3 +91,42 @@
 - `npm view @idogee/permissio version`
 - `npx @idogee/permissio@latest demo`
 - Create GitHub `v0.2.0` release.
+
+## final npm publish readiness
+
+### Commands run
+
+- `npm install`
+- `npm test`
+- `npm run build`
+- `npm run typecheck`
+- `npm run lint`
+- `env npm_config_cache=/private/tmp/permissio-npm-cache npm pack --dry-run`
+- Stale text scan for legacy package/install placeholders and draft launch wording.
+
+### Commands passed
+
+- `npm install`
+- `npm test` with 28 passing tests
+- `npm run build`
+- `npm run typecheck`
+- `npm run lint`
+- `env npm_config_cache=/private/tmp/permissio-npm-cache npm pack --dry-run`
+- Stale text scan has no disallowed matches. The local binary command appears only in the README section after `npm install --save-dev @idogee/permissio`.
+
+### Files changed
+
+- `docs/npm-publish-check.md`
+- `package.json`
+- `test/launch.test.ts`
+- `FINAL_CHECK.md`
+
+### Manual next steps
+
+- `env npm_config_cache=/private/tmp/permissio-npm-cache npm publish --access public`
+- `npm view @idogee/permissio version`
+- `npx @idogee/permissio@latest demo`
+- `npx @idogee/permissio@latest check . --format markdown`
+- Edit GitHub `v0.2.0` release notes if needed.
+- Open seed issues.
+- Post launch.
