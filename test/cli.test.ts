@@ -1,6 +1,6 @@
 import path from "node:path";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
@@ -135,6 +135,21 @@ describe("cli", () => {
     expect(parsed.summary.filesScanned).toBe(1);
   });
 
+  it("executes through a symlinked npm bin path", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "permissio-bin-"));
+    const binPath = path.join(tempDir, "permissio");
+    try {
+      await symlink(path.join(process.cwd(), "src/cli.ts"), binPath);
+      const { stdout } = await execFileAsync(process.execPath, ["--import", "tsx", binPath, "--version"], {
+        cwd: process.cwd()
+      });
+
+      expect(stdout.trim()).toBe("0.2.2");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("prints the CLI version", async () => {
     const output: string[] = [];
     const code = await runCli(["--version"], {
@@ -144,6 +159,6 @@ describe("cli", () => {
     });
 
     expect(code).toBe(0);
-    expect(output.join("").trim()).toBe("0.2.1");
+    expect(output.join("").trim()).toBe("0.2.2");
   });
 });

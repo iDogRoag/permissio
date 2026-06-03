@@ -2,6 +2,11 @@
 
 All notable changes to permissio will be documented in this file.
 
+## 0.2.2 - 2026-06-02
+
+- Fixed installed CLI execution through npm's `.bin/permissio` symlink.
+- Added regression coverage for symlinked npm bin invocation.
+
 ## 0.2.1 - 2026-06-02
 
 - Finalized npm package identity as `@idogee/permissio`.

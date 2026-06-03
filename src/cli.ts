@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -229,7 +229,20 @@ function readPackageVersion(): string {
   }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+function isCliEntrypoint(): boolean {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  const entrypointPath = fileURLToPath(import.meta.url);
+  try {
+    return realpathSync(process.argv[1]) === entrypointPath;
+  } catch {
+    return path.resolve(process.argv[1]) === entrypointPath;
+  }
+}
+
+if (isCliEntrypoint()) {
   const code = await runCli();
   process.exitCode = code;
 }
