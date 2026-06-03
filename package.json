@@ -1,6 +1,6 @@
 {
   "name": "@idogee/permissio",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "GitHub Actions permission minimizer for least privilege GITHUB_TOKEN settings.",
   "type": "module",
   "license": "MIT",

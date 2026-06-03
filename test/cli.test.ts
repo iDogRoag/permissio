@@ -144,6 +144,6 @@ describe("cli", () => {
     });
 
     expect(code).toBe(0);
-    expect(output.join("").trim()).toBe("0.2.0");
+    expect(output.join("").trim()).toBe("0.2.1");
   });
 });

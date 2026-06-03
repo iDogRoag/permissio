@@ -2,6 +2,14 @@
 
 All notable changes to permissio will be documented in this file.
 
+## 0.2.1 - 2026-06-02
+
+- Finalized npm package identity as `@idogee/permissio`.
+- Kept the GitHub repository at `iDogRoag/permissio` and the CLI binary as `permissio`.
+- Added public scoped npm publish configuration and publish verification docs.
+- Added CI-compatible `--ci` flag support for documented GitHub Actions usage.
+- Updated release readiness tests for package metadata and npm publish docs.
+
 ## 0.2.0 - 2026-06-01
 
 - Added `permissio demo` with table, Markdown, JSON, and HTML output.

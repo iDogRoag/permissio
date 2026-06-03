@@ -108,10 +108,10 @@ describe("launch features", () => {
     const packageJson = JSON.parse(await readFile(path.join(process.cwd(), "package.json"), "utf8"));
     const readme = await readFile(path.join(process.cwd(), "README.md"), "utf8");
     const publishCheck = await readFile(path.join(process.cwd(), "docs/npm-publish-check.md"), "utf8");
-    const releaseNotes = await readFile(path.join(process.cwd(), "docs/release-v0.2.0.md"), "utf8");
+    const releaseNotes = await readFile(path.join(process.cwd(), "docs/release-v0.2.1.md"), "utf8");
 
     expect(packageJson.name).toBe("@idogee/permissio");
-    expect(packageJson.version).toBe("0.2.0");
+    expect(packageJson.version).toBe("0.2.1");
     expect(packageJson.description).toBe("GitHub Actions permission minimizer for least privilege GITHUB_TOKEN settings.");
     expect(packageJson.private).toBe(false);
     expect(packageJson.repository).toMatchObject({
@@ -134,7 +134,7 @@ describe("launch features", () => {
     expect(readme).not.toContain(["@idogroag", "permissio"].join("/"));
     expect(publishCheck).toContain("npm publish --access public");
     expect(publishCheck).toContain("npx @idogee/permissio@latest demo");
-    expect(releaseNotes).toContain("v0.2.0");
+    expect(releaseNotes).toContain("v0.2.1");
     expect(releaseNotes).toContain("@idogee/permissio");
   });
 });
