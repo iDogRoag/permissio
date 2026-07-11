@@ -4,7 +4,7 @@ permissio is a static analyzer. It does not call the GitHub API, require credent
 
 ## Reporting a Vulnerability
 
-Please report security issues privately by opening a GitHub security advisory for the repository once available. If advisories are not enabled, email the maintainer listed on the GitHub profile.
+Please report security issues privately through [GitHub private vulnerability reporting](https://github.com/iDogRoag/permissio/security/advisories/new) when available. Otherwise, email the maintainer listed on the GitHub profile.
 
 Include:
 

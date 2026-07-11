@@ -1,20 +1,20 @@
 Permissio
 
-Permission score 0 out of 100 (critical)
+Permission score 20 out of 100 (critical)
 Workflows scanned 1
 Jobs scanned 4
 Jobs with write-all 2
 Jobs missing explicit permissions 0
 Jobs with recommended changes 4
-High findings 18
+High findings 8
 
 Top findings
 
-Workflow grants permissions: write-all (.github/workflows/risky.yml)
-artifact-metadata write was declared but no attestation action was detected (.github/workflows/risky.yml inspect)
-attestations write was declared but no attestation action was detected (.github/workflows/risky.yml inspect)
-id-token write was declared but no OIDC, cloud auth, or attestation use was detected (.github/workflows/risky.yml inspect)
-packages write was declared but no package publish or ghcr push was detected (.github/workflows/risky.yml inspect)
+Workflow grants permissions: write-all (.github/workflows/risky.yml:6:1)
+pull_request_target job checks out pull request head while write permissions are available (.github/workflows/risky.yml:12:9 inspect)
+pull_request_target job has write permissions (.github/workflows/risky.yml:6:1 inspect)
+pull_request_target job has write permissions (.github/workflows/risky.yml:6:1 noop)
+contents write on pull_request_target was not tied to a clear release or bot operation (.github/workflows/risky.yml:27:7 publish)
 
 Showing top 5 findings.
 Use --format markdown or --show-snippets for details.

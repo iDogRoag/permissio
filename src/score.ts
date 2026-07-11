@@ -73,11 +73,20 @@ export function computeScore(findings: Finding[]): PermissionScore {
   return {
     value,
     label: labelForScore(value),
+    status: findings.some((finding) => finding.category === "parse") ? "incomplete" : "complete",
     penalties
   };
 }
 
 export function buildBadge(score: PermissionScore): BadgeSummary {
+  if (score.status === "incomplete") {
+    return {
+      markdown: "![permissio score](https://img.shields.io/badge/permissio-incomplete-lightgrey)",
+      label: "permissio incomplete",
+      color: "lightgrey"
+    };
+  }
+
   const label = `permissio ${score.value}/100`;
   const color = colorForScore(score.value);
   return {

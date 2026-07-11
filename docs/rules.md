@@ -43,4 +43,4 @@ For safer `pull_request_target` workflows, declare explicit permissions at the w
 
 ## JSON Stability
 
-JSON output includes `schemaVersion`. Additive fields may appear within the same major schema version; incompatible shape changes should bump the schema version.
+JSON output includes `schemaVersion`. Findings include exact one-based YAML `startLine` and `startColumn` values when the parser can resolve them. The permission score has a `status` of `complete` or `incomplete`; consumers should not treat its numeric value as a safety grade when parsing was incomplete. Additive fields may appear within the same major schema version; incompatible shape changes should bump the schema version.

@@ -108,7 +108,7 @@
     <h1>Permissio report</h1>
     <p class="lede">GitHub Actions GITHUB_TOKEN permission review.</p>
     <div class="score">
-      Permission score 0 out of 100
+      Permission score 20 out of 100
       <span class="badge">critical</span>
     </div>
     <section class="grid" aria-label="Summary">
@@ -117,10 +117,10 @@
       <div class="metric"><strong>2</strong><span>Write-all jobs</span></div>
       <div class="metric"><strong>0</strong><span>Missing explicit</span></div>
       <div class="metric"><strong>4</strong><span>Recommended changes</span></div>
-      <div class="metric"><strong>18</strong><span>High findings</span></div>
+      <div class="metric"><strong>8</strong><span>High findings</span></div>
     </section>
     <h2>Top findings</h2>
-    <ul><li><span class="severity-high">high</span>: Workflow grants permissions: write-all <small>(.github/workflows/risky.yml)</small></li><li><span class="severity-high">high</span>: artifact-metadata write was declared but no attestation action was detected <small>(.github/workflows/risky.yml / inspect)</small></li><li><span class="severity-high">high</span>: attestations write was declared but no attestation action was detected <small>(.github/workflows/risky.yml / inspect)</small></li><li><span class="severity-high">high</span>: id-token write was declared but no OIDC, cloud auth, or attestation use was detected <small>(.github/workflows/risky.yml / inspect)</small></li><li><span class="severity-high">high</span>: packages write was declared but no package publish or ghcr push was detected <small>(.github/workflows/risky.yml / inspect)</small></li><li><span class="severity-high">high</span>: pull_request_target job checks out pull request head while write permissions are available <small>(.github/workflows/risky.yml / inspect)</small></li><li><span class="severity-high">high</span>: contents write on pull_request_target was not tied to a clear release or bot operation <small>(.github/workflows/risky.yml / inspect)</small></li><li><span class="severity-high">high</span>: pull_request_target workflow has write permissions <small>(.github/workflows/risky.yml / inspect)</small></li><li><span class="severity-high">high</span>: artifact-metadata write was declared but no attestation action was detected <small>(.github/workflows/risky.yml / noop)</small></li><li><span class="severity-high">high</span>: attestations write was declared but no attestation action was detected <small>(.github/workflows/risky.yml / noop)</small></li></ul>
+    <ul><li><span class="severity-high">high</span>: Workflow grants permissions: write-all <small>(.github/workflows/risky.yml:6:1)</small></li><li><span class="severity-high">high</span>: pull_request_target job checks out pull request head while write permissions are available <small>(.github/workflows/risky.yml:12:9 / inspect)</small></li><li><span class="severity-high">high</span>: pull_request_target job has write permissions <small>(.github/workflows/risky.yml:6:1 / inspect)</small></li><li><span class="severity-high">high</span>: pull_request_target job has write permissions <small>(.github/workflows/risky.yml:6:1 / noop)</small></li><li><span class="severity-high">high</span>: contents write on pull_request_target was not tied to a clear release or bot operation <small>(.github/workflows/risky.yml:27:7 / publish)</small></li><li><span class="severity-high">high</span>: pull_request_target job has write permissions <small>(.github/workflows/risky.yml:26:5 / publish)</small></li><li><span class="severity-high">high</span>: id-token write was declared but no OIDC, cloud auth, or attestation use was detected <small>(.github/workflows/risky.yml:20:7 / token)</small></li><li><span class="severity-high">high</span>: pull_request_target job has write permissions <small>(.github/workflows/risky.yml:19:5 / token)</small></li></ul>
     <h2>Suggested snippets</h2>
     <h3>.github/workflows/risky.yml / inspect</h3><pre>jobs:
   inspect:

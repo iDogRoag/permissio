@@ -1,0 +1,12 @@
+name: Unneeded id-token
+
+on:
+  push:
+
+jobs:
+  token:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - run: echo "hello"

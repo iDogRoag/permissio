@@ -29,6 +29,6 @@ body:
     id: version
     attributes:
       label: permissio version
-      placeholder: "0.1.0"
+      placeholder: "Output of permissio --version"
     validations:
       required: false

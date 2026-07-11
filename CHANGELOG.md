@@ -2,6 +2,13 @@
 
 All notable changes to permissio will be documented in this file.
 
+## 0.3.0 - 2026-07-10
+
+- Added SARIF 2.1.0 output for GitHub code scanning.
+- Added exact YAML source locations to findings across JSON, SARIF, terminal, Markdown, and HTML reports.
+- Reduced duplicate scope findings for `write-all` and made incomplete scans report the permission score as unavailable.
+- Updated the SARIF upload example to CodeQL Action v4 and added Node.js 26 to CI coverage.
+
 ## 0.2.2 - 2026-06-02
 
 - Fixed installed CLI execution through npm's `.bin/permissio` symlink.

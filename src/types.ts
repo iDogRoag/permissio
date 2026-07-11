@@ -26,6 +26,11 @@ export type Confidence = "high" | "medium" | "low";
 export type Severity = "high" | "medium" | "low";
 export type FindingCategory = "parse" | "permissions" | "pull-request-target" | "rules";
 
+export interface SourceLocation {
+  startLine: number;
+  startColumn: number;
+}
+
 export type ParsedPermissions =
   | { kind: "missing"; raw?: undefined }
   | { kind: "empty"; raw: Record<string, never> }
@@ -44,6 +49,7 @@ export interface ParsedStep {
   run?: string;
   with?: Record<string, unknown>;
   env?: Record<string, unknown>;
+  location?: SourceLocation;
   raw: unknown;
 }
 
@@ -52,6 +58,9 @@ export interface ParsedJob {
   name?: string;
   uses?: string;
   permissions: ParsedPermissions;
+  location?: SourceLocation;
+  permissionsLocation?: SourceLocation;
+  permissionLocations?: Record<string, SourceLocation>;
   steps: ParsedStep[];
   raw: Record<string, unknown>;
 }
@@ -62,6 +71,10 @@ export interface ParsedWorkflow {
   on: unknown;
   permissions: ParsedPermissions;
   jobs: ParsedJob[];
+  location?: SourceLocation;
+  triggerLocation?: SourceLocation;
+  permissionsLocation?: SourceLocation;
+  permissionLocations?: Record<string, SourceLocation>;
   raw: Record<string, unknown>;
   sourceText: string;
 }
@@ -76,6 +89,7 @@ export interface Finding {
   jobId?: string;
   scope?: string;
   evidence?: string;
+  location?: SourceLocation;
 }
 
 export interface RecommendationReason {
@@ -142,6 +156,7 @@ export interface ScorePenalty {
 export interface PermissionScore {
   value: number;
   label: "strong" | "good" | "risky" | "critical";
+  status?: "complete" | "incomplete";
   penalties: ScorePenalty[];
 }
 

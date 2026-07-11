@@ -1,4 +1,5 @@
 import type { Finding, ScanReport } from "../types.js";
+import { formatFindingLocation } from "./location.js";
 
 export function renderHtml(report: ScanReport): string {
   const topFindings = report.findings.slice(0, 10);
@@ -61,7 +62,7 @@ export function renderHtml(report: ScanReport): string {
     }
     .badge {
       border-radius: 999px;
-      background: ${badgeColor(report.score.value)};
+      background: ${report.score.status === "incomplete" ? "#6b7280" : badgeColor(report.score.value)};
       color: #ffffff;
       padding: 4px 10px;
       font-size: 13px;
@@ -113,8 +114,8 @@ export function renderHtml(report: ScanReport): string {
     <h1>Permissio report</h1>
     <p class="lede">GitHub Actions GITHUB_TOKEN permission review.</p>
     <div class="score">
-      Permission score ${report.score.value} out of 100
-      <span class="badge">${escapeHtml(report.score.label)}</span>
+      ${report.score.status === "incomplete" ? "Permission score unavailable" : `Permission score ${report.score.value} out of 100`}
+      <span class="badge">${escapeHtml(report.score.status === "incomplete" ? "incomplete" : report.score.label)}</span>
     </div>
     <section class="grid" aria-label="Summary">
       ${metric("Workflows", report.summary.workflowsScanned)}
@@ -150,7 +151,7 @@ function metric(label: string, value: number): string {
 }
 
 function formatFinding(finding: Finding): string {
-  const location = [finding.filePath, finding.jobId].filter(Boolean).join(" / ");
+  const location = formatFindingLocation(finding, " / ");
   const severityClass = finding.severity === "high" ? "severity-high" : "";
   return `<span class="${severityClass}">${escapeHtml(finding.severity)}</span>: ${escapeHtml(finding.message)}${
     location ? ` <small>(${escapeHtml(location)})</small>` : ""

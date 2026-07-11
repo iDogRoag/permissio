@@ -1,11 +1,13 @@
 # Permissio
 
-Least privilege for GitHub Actions tokens in one command.
+[![npm version](https://img.shields.io/npm/v/@idogee/permissio)](https://www.npmjs.com/package/@idogee/permissio)
+[![CI](https://github.com/iDogRoag/permissio/actions/workflows/ci.yml/badge.svg)](https://github.com/iDogRoag/permissio/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/@idogee/permissio)](LICENSE)
 
-Find overly broad GitHub Actions permissions and replace them with explicit least privilege settings.
+Find overprivileged GitHub Actions tokens before they become an invisible part of your CI/CD attack surface.
 
 Permissio scans `.github/workflows` and recommends the smallest likely `GITHUB_TOKEN` permissions for each job.
-It helps replace implicit defaults, `read-all`, `write-all`, and broad workflow-level permissions with clear job-level permissions.
+It reports exact YAML locations, emits GitHub-compatible SARIF, and provides copy-paste least-privilege settings.
 
 ![Permissio demo screenshot](docs/assets/demo.png)
 
@@ -20,21 +22,21 @@ npx @idogee/permissio demo
 ```txt
 Permissio
 
-Permission score 54 out of 100
-Workflows scanned 3
-Jobs scanned 8
-Jobs with write-all 1
-Jobs missing explicit permissions 5
-Jobs with recommended changes 6
-High findings 2
+Permission score 20 out of 100 (critical)
+Workflows scanned 1
+Jobs scanned 4
+Jobs with write-all 2
+Jobs missing explicit permissions 0
+Jobs with recommended changes 4
+High findings 8
 
 Top findings
 
-write-all used at workflow level
-pull_request_target has write permissions
-id-token write is set but no OIDC use was detected
-contents write appears broader than needed
-job can use permissions: {}
+Workflow grants permissions: write-all (.github/workflows/risky.yml:6:1)
+pull_request_target job checks out pull request head while write permissions are available
+pull_request_target job has write permissions
+contents write on pull_request_target was not tied to a clear release or bot operation
+id-token write was declared but no OIDC, cloud auth, or attestation use was detected
 
 Suggested snippet
 
@@ -81,6 +83,7 @@ permissio check --show-snippets
 permissio check --format markdown
 permissio check --format json
 permissio check --format html --output permissio-report.html
+permissio check --format sarif --output permissio.sarif
 permissio check --badge
 permissio check --fail-on high
 ```
@@ -94,6 +97,7 @@ npx @idogee/permissio demo
 npx @idogee/permissio demo --format markdown
 npx @idogee/permissio demo --format json
 npx @idogee/permissio demo --format html --output permissio-demo.html
+npx @idogee/permissio demo --format sarif
 npx @idogee/permissio demo --show-snippets
 npx @idogee/permissio demo --badge
 ```
@@ -109,21 +113,21 @@ Demo assets:
 ```txt
 Permissio
 
-Permission score 54 out of 100
-Workflows scanned 3
-Jobs scanned 8
-Jobs with write-all 1
-Jobs missing explicit permissions 5
-Jobs with recommended changes 6
-High findings 2
+Permission score 20 out of 100 (critical)
+Workflows scanned 1
+Jobs scanned 4
+Jobs with write-all 2
+Jobs missing explicit permissions 0
+Jobs with recommended changes 4
+High findings 8
 
 Top findings
 
-write-all used at workflow level
-pull_request_target has write permissions
-id-token write is set but no OIDC use was detected
-contents write appears broader than needed
-job can use permissions: {}
+Workflow grants permissions: write-all (.github/workflows/risky.yml:6:1)
+pull_request_target job checks out pull request head while write permissions are available
+pull_request_target job has write permissions
+contents write on pull_request_target was not tied to a clear release or bot operation
+id-token write was declared but no OIDC, cloud auth, or attestation use was detected
 
 Suggested snippet
 
@@ -186,6 +190,36 @@ jobs:
       - run: npx @idogee/permissio check . --ci --format markdown --output permissio-report.md --fail-on high
 ```
 
+To upload findings to GitHub code scanning, emit SARIF and upload it:
+
+```yaml
+name: Check GitHub Actions permissions
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  permissio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npx @idogee/permissio check . --ci --format sarif --output permissio.sarif --fail-on high
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: permissio.sarif
+```
+
 ## How Permissio is different
 
 zizmor is a GitHub Actions security linter.
@@ -198,6 +232,7 @@ Use them together.
 
 The npm package is `@idogee/permissio`.
 The CLI binary remains `permissio`.
+Permissio requires Node.js 22.13 or newer; Node.js 24 LTS is recommended. CI also tests the current Node.js 26 release.
 
 For one-off runs without a local or global install:
 
@@ -253,10 +288,13 @@ permissio check --format table
 permissio check --format markdown
 permissio check --format json
 permissio check --format html --output permissio-report.html
+permissio check --format sarif --output permissio.sarif
 ```
 
 JSON output includes a stable top-level `schemaVersion`, `summary`, `score`, `workflows`, and `findings`.
-Each finding includes `id`, `category`, `severity`, `message`, and location fields.
+Each finding includes `id`, `category`, `severity`, `message`, and an exact YAML source location when available.
+
+SARIF output uses SARIF 2.1.0 and can be uploaded to GitHub code scanning. Findings point to the relevant permission, job, trigger, or step line.
 
 Permissio can print badge Markdown, but it does not host badges in v1.
 
@@ -268,6 +306,7 @@ permissio check --badge
 
 The permission score is a heuristic from `0` to `100`, not proof of safety.
 It starts at `100` and subtracts points for broad or risky permission patterns.
+If any workflow cannot be parsed, the score status is `incomplete` and human-readable reports show the score as unavailable instead of presenting a misleading safety grade.
 
 Labels:
 
@@ -283,6 +322,7 @@ JSON output includes:
   "score": {
     "value": 54,
     "label": "risky",
+    "status": "complete",
     "penalties": []
   }
 }
@@ -314,7 +354,6 @@ It intentionally does not try to model repository or organization default token 
 
 - Autofix mode
 - PR comment mode
-- SARIF output
 - GitHub App
 - Organization-wide scan
 - Integration with gha-bom

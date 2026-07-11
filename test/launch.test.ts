@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { runCli } from "../src/cli.js";
 
 describe("launch features", () => {
-  it("runs the bundled demo in table, json, and markdown formats", async () => {
+  it("runs the bundled demo in table, json, markdown, and sarif formats", async () => {
     const table = await run(["demo"]);
     expect(table.code).toBe(0);
     expect(table.output).toContain("Permissio");
@@ -21,6 +21,10 @@ describe("launch features", () => {
     const markdown = await run(["demo", "--format", "markdown"]);
     expect(markdown.code).toBe(0);
     expect(markdown.output).toContain("**Permission score:**");
+
+    const sarif = await run(["demo", "--format", "sarif"]);
+    expect(sarif.code).toBe(0);
+    expect(JSON.parse(sarif.output).version).toBe("2.1.0");
 
     const snippets = await run(["demo", "--show-snippets"]);
     expect(snippets.code).toBe(0);
@@ -102,16 +106,23 @@ describe("launch features", () => {
 
     const html = await run(["demo", "--format", "html"]);
     expect(html.output).toContain("Permission score");
+
+    const sarif = await run(["demo", "--format", "sarif"]);
+    expect(JSON.parse(sarif.output).runs[0].tool.driver.name).toBe("permissio");
   });
 
   it("keeps npm package identity and install docs aligned", async () => {
     const packageJson = JSON.parse(await readFile(path.join(process.cwd(), "package.json"), "utf8"));
+    const packageLock = JSON.parse(await readFile(path.join(process.cwd(), "package-lock.json"), "utf8"));
     const readme = await readFile(path.join(process.cwd(), "README.md"), "utf8");
     const publishCheck = await readFile(path.join(process.cwd(), "docs/npm-publish-check.md"), "utf8");
-    const releaseNotes = await readFile(path.join(process.cwd(), "docs/release-v0.2.2.md"), "utf8");
+    const releaseNotes = await readFile(path.join(process.cwd(), "docs/release-v0.3.0.md"), "utf8");
+    const ciWorkflow = await readFile(path.join(process.cwd(), ".github/workflows/ci.yml"), "utf8");
 
     expect(packageJson.name).toBe("@idogee/permissio");
-    expect(packageJson.version).toBe("0.2.2");
+    expect(packageJson.version).toBe("0.3.0");
+    expect(packageLock.version).toBe("0.3.0");
+    expect(packageLock.packages[""].version).toBe("0.3.0");
     expect(packageJson.description).toBe("GitHub Actions permission minimizer for least privilege GITHUB_TOKEN settings.");
     expect(packageJson.private).toBe(false);
     expect(packageJson.repository).toMatchObject({
@@ -128,14 +139,45 @@ describe("launch features", () => {
     expect(readme).toContain("npx @idogee/permissio check .");
     expect(readme).toContain("npx @idogee/permissio demo");
     expect(readme).toContain("npm install --save-dev @idogee/permissio");
+    expect(readme).toContain("Permissio requires Node.js 22.13 or newer");
+    expect(readme).toContain("permissio check --format sarif --output permissio.sarif");
+    expect(readme).toContain("github/codeql-action/upload-sarif@v4");
+    expect(ciWorkflow).toContain("- 26");
     expect(readme).toContain(
       "npx @idogee/permissio check . --ci --format markdown --output permissio-report.md --fail-on high"
     );
     expect(readme).not.toContain(["@idogroag", "permissio"].join("/"));
     expect(publishCheck).toContain("npm publish --access public");
     expect(publishCheck).toContain("npx @idogee/permissio@latest demo");
-    expect(releaseNotes).toContain("v0.2.2");
+    expect(releaseNotes).toContain("v0.3.0");
     expect(releaseNotes).toContain("@idogee/permissio");
+    expect(releaseNotes).toContain("GitHub code scanning");
+  });
+
+  it("keeps GitHub-facing documentation aligned with the current release", async () => {
+    const paths = [
+      "README.md",
+      "CHANGELOG.md",
+      "CONTRIBUTING.md",
+      "SECURITY.md",
+      "LAUNCH.md",
+      "docs/demo-script.md",
+      "docs/release-checklist.md",
+      "docs/release-v0.3.0.md",
+      "docs/rules.md",
+      "docs/share-copy.md",
+      ".github/ISSUE_TEMPLATE/bug_report.yml",
+      ".github/pull_request_template.md",
+      ".github/workflows/ci.yml"
+    ];
+    const docs = await Promise.all(paths.map((filePath) => readFile(path.join(process.cwd(), filePath), "utf8")));
+    const combined = docs.join("\n");
+
+    expect(combined).toContain("0.3.0");
+    expect(combined).toContain("GitHub code scanning");
+    expect(combined).toContain("github/codeql-action/upload-sarif@v4");
+    expect(combined).not.toContain("github/codeql-action/upload-sarif@v3");
+    expect(combined).not.toContain('placeholder: "0.1.0"');
   });
 });
 
