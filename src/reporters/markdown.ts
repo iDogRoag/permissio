@@ -1,4 +1,5 @@
 import type { ScanReport } from "../types.js";
+import { formatFindingLocation } from "./location.js";
 
 export interface MarkdownReporterOptions {
   showSnippets?: boolean;
@@ -10,7 +11,11 @@ export function renderMarkdown(report: ScanReport, options: MarkdownReporterOpti
 
   lines.push("# permissio report");
   lines.push("");
-  lines.push(`**Permission score:** ${report.score.value} out of 100 (${report.score.label})`);
+  lines.push(
+    report.score.status === "incomplete"
+      ? "**Permission score:** unavailable (scan incomplete)"
+      : `**Permission score:** ${report.score.value} out of 100 (${report.score.label})`
+  );
   lines.push("");
   if (options.badge && report.badge) {
     lines.push(report.badge.markdown);
@@ -22,12 +27,17 @@ export function renderMarkdown(report: ScanReport, options: MarkdownReporterOpti
     `| ${report.summary.filesScanned} | ${report.summary.workflowsScanned} | ${report.summary.jobsScanned} | ${report.summary.jobsWithWriteAll} | ${report.summary.jobsMissingExplicitPermissions} | ${report.summary.high} | ${report.summary.medium} | ${report.summary.low} | ${report.summary.jobsWithRecommendedChanges} |`
   );
 
-  if (report.workflows.length === 0) {
+  if (report.workflows.length === 0 && report.findings.length === 0) {
     lines.push("");
     lines.push("No GitHub Actions workflows found.");
     lines.push("");
     lines.push("Permissio scans `.github/workflows` by default. Try `permissio demo` to see an example report.");
     return `${lines.join("\n")}\n`;
+  }
+
+  if (report.workflows.length === 0) {
+    lines.push("");
+    lines.push("No valid GitHub Actions workflows could be analyzed.");
   }
 
   for (const workflow of report.workflows) {
@@ -72,7 +82,7 @@ export function renderMarkdown(report: ScanReport, options: MarkdownReporterOpti
     lines.push("## Findings");
     lines.push("");
     for (const finding of report.findings) {
-      const location = [finding.filePath, finding.jobId].filter(Boolean).join(" / ");
+      const location = formatFindingLocation(finding, " / ");
       lines.push(`- **${finding.severity}** ${finding.message} (${location})`);
     }
   }

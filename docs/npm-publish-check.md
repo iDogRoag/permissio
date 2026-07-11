@@ -13,7 +13,7 @@ npm publish --access public --dry-run
 ```
 
 For the first public publish of a scoped package, include `--access public`.
-Publishing must be done manually by the maintainer.
+Publish only from the merged release commit with package metadata, tag, npm version, and GitHub release notes aligned.
 
 ## Publish
 

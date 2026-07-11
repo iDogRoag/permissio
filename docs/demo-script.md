@@ -22,13 +22,13 @@ Point out broad `write-all`, risky `pull_request_target`, unnecessary `id-token:
 
 ## 25-40 seconds
 
-Show Markdown output:
+Generate GitHub code-scanning output:
 
 ```sh
-permissio check examples/pages --format markdown
+permissio demo --format sarif --output permissio.sarif
 ```
 
-Explain that Pages deploys usually need `pages: write` and `id-token: write`, while build jobs often only need `contents: read`.
+Explain that SARIF findings include exact workflow lines and stable fingerprints, ready for GitHub code scanning.
 
 ## 40-50 seconds
 
@@ -39,7 +39,7 @@ permissio demo --format html --output permissio-demo.html
 open permissio-demo.html
 ```
 
-Show the score, top findings, and suggested snippets.
+Show the quieter findings, exact source locations, score, and suggested snippets.
 
 ## 50-60 seconds
 

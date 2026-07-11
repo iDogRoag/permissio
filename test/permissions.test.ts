@@ -54,10 +54,20 @@ describe("permission inference", () => {
 
   it("flags pull_request_target with write-all as high severity", async () => {
     const report = await scanPath(fixtures, { include: ["risky.yml"] });
+    const workflowWriteAll = report.findings.find((finding) => finding.id === "permissions.workflow-write-all");
+    const unsafeCheckout = report.findings.find(
+      (finding) => finding.id === "pull-request-target.checkout-head-with-write"
+    );
 
     expect(report.summary.high).toBeGreaterThan(0);
-    expect(report.findings.some((finding) => finding.id === "permissions.workflow-write-all")).toBe(true);
-    expect(report.findings.some((finding) => finding.id === "pull-request-target.checkout-head-with-write")).toBe(true);
+    expect(workflowWriteAll?.location).toEqual({ startLine: 6, startColumn: 1 });
+    expect(unsafeCheckout?.location).toEqual({ startLine: 12, startColumn: 9 });
+    expect(report.findings.some((finding) => finding.id === "permissions.extra-write-scopes")).toBe(false);
+    expect(
+      report.findings.some(
+        (finding) => finding.id === "permissions.id-token-write-unneeded" && finding.jobId === "inspect"
+      )
+    ).toBe(false);
   });
 
   it("flags implicit pull_request_target permissions as write-risk", async () => {
@@ -68,7 +78,8 @@ describe("permission inference", () => {
         expect.objectContaining({
           id: "permissions.missing-explicit",
           category: "permissions",
-          severity: "high"
+          severity: "high",
+          location: { startLine: 7, startColumn: 3 }
         }),
         expect.objectContaining({
           id: "pull-request-target.write-permissions",
@@ -86,9 +97,17 @@ describe("permission inference", () => {
   });
 
   it("flags id-token write without OIDC or attestation use", async () => {
-    const report = await scanPath(fixtures, { include: ["risky.yml"] });
+    const report = await scanPath(fixtures, { include: ["unneeded-id-token.yml"] });
 
-    expect(report.findings.some((finding) => finding.id === "permissions.id-token-write-unneeded")).toBe(true);
+    expect(report.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "permissions.id-token-write-unneeded",
+          location: { startLine: 10, startColumn: 7 }
+        })
+      ])
+    );
+    expect(report.findings.some((finding) => finding.id === "permissions.extra-write-scopes")).toBe(false);
   });
 
   it("keeps invalid YAML as a finding without crashing the scan", async () => {
@@ -98,6 +117,7 @@ describe("permission inference", () => {
     expect(report.summary.workflowsScanned).toBe(0);
     expect(report.findings[0]?.id).toBe("parse.invalid-yaml");
     expect(report.findings[0]?.category).toBe("parse");
+    expect(report.score.status).toBe("incomplete");
   });
 });
 

@@ -1,5 +1,6 @@
 import {
   checksOutPullRequestHead,
+  checksOutPullRequestHeadStep,
   firstLine,
   hasGenericOidcSignal,
   isActionsWrite,
@@ -44,6 +45,7 @@ import type {
   PermissionLevel,
   PermissionScope,
   RecommendationReason,
+  SourceLocation,
   WorkflowResult
 } from "./types.js";
 
@@ -105,7 +107,7 @@ export function analyzeWorkflow(workflow: ParsedWorkflow): WorkflowResult {
     addRiskFindings(findings, workflow, job, result, inference, pullRequestTarget);
     return {
       ...result,
-      findings: sortFindings(findings).map(withFindingCategory)
+      findings: sortFindings(findings).map((finding) => decorateFinding(finding, workflow, job))
     };
   });
 
@@ -113,7 +115,7 @@ export function analyzeWorkflow(workflow: ParsedWorkflow): WorkflowResult {
     filePath: workflow.filePath,
     workflowName: workflow.name,
     jobs: jobs.sort((a, b) => a.jobId.localeCompare(b.jobId)),
-    findings: sortFindings(workflowFindings).map(withFindingCategory)
+    findings: sortFindings(workflowFindings).map((finding) => decorateFinding(finding, workflow))
   };
 }
 
@@ -238,8 +240,18 @@ function addRiskFindings(
   const extraWriteScopes = Object.entries(current).filter(
     ([scope, level]) => level === "write" && recommendedExpanded[scope as PermissionScope] !== "write"
   );
+  const scopesWithSpecificFindings = new Set([
+    "artifact-metadata",
+    "attestations",
+    "contents",
+    "id-token",
+    "issues",
+    "packages",
+    "pull-requests"
+  ]);
+  const genericExtraWriteScopes = extraWriteScopes.filter(([scope]) => !scopesWithSpecificFindings.has(scope));
 
-  if (extraWriteScopes.length > 0) {
+  if (result.current.kind !== "write-all" && genericExtraWriteScopes.length > 0) {
     findings.push({
       id: "permissions.extra-write-scopes",
       severity: "medium",
@@ -247,11 +259,16 @@ function addRiskFindings(
       filePath: workflow.filePath,
       workflowName: workflow.name,
       jobId: job.id,
-      evidence: extraWriteScopes.map(([scope]) => scope).join(", ")
+      evidence: genericExtraWriteScopes.map(([scope]) => scope).join(", ")
     });
   }
 
-  if (current.contents === "write" && result.recommended.permissions.contents !== "write") {
+  if (
+    result.current.kind !== "write-all" &&
+    !pullRequestTarget &&
+    current.contents === "write" &&
+    result.recommended.permissions.contents !== "write"
+  ) {
     findings.push({
       id: "permissions.contents-write-unneeded",
       severity: "medium",
@@ -263,7 +280,11 @@ function addRiskFindings(
     });
   }
 
-  if (current["pull-requests"] === "write" && !inference.detected.pullRequestWrite) {
+  if (
+    result.current.kind !== "write-all" &&
+    current["pull-requests"] === "write" &&
+    !inference.detected.pullRequestWrite
+  ) {
     findings.push({
       id: "permissions.pull-requests-write-unneeded",
       severity: "medium",
@@ -275,7 +296,7 @@ function addRiskFindings(
     });
   }
 
-  if (current.issues === "write" && !inference.detected.issueWrite) {
+  if (result.current.kind !== "write-all" && current.issues === "write" && !inference.detected.issueWrite) {
     findings.push({
       id: "permissions.issues-write-unneeded",
       severity: "medium",
@@ -287,7 +308,12 @@ function addRiskFindings(
     });
   }
 
-  if (current["id-token"] === "write" && !inference.detected.oidc && !inference.detected.attestation) {
+  if (
+    result.current.kind !== "write-all" &&
+    current["id-token"] === "write" &&
+    !inference.detected.oidc &&
+    !inference.detected.attestation
+  ) {
     findings.push({
       id: "permissions.id-token-write-unneeded",
       severity: "high",
@@ -299,7 +325,7 @@ function addRiskFindings(
     });
   }
 
-  if (current.packages === "write" && !inference.detected.packageWrite) {
+  if (result.current.kind !== "write-all" && current.packages === "write" && !inference.detected.packageWrite) {
     findings.push({
       id: "permissions.packages-write-unneeded",
       severity: "high",
@@ -311,7 +337,7 @@ function addRiskFindings(
     });
   }
 
-  if (current.attestations === "write" && !inference.detected.attestation) {
+  if (result.current.kind !== "write-all" && current.attestations === "write" && !inference.detected.attestation) {
     findings.push({
       id: "permissions.attestations-write-unneeded",
       severity: "high",
@@ -323,7 +349,11 @@ function addRiskFindings(
     });
   }
 
-  if (current["artifact-metadata"] === "write" && !inference.detected.attestation) {
+  if (
+    result.current.kind !== "write-all" &&
+    current["artifact-metadata"] === "write" &&
+    !inference.detected.attestation
+  ) {
     findings.push({
       id: "permissions.artifact-metadata-write-unneeded",
       severity: "high",
@@ -342,7 +372,7 @@ function addRiskFindings(
       findings.push({
         id: "pull-request-target.write-permissions",
         severity: "high",
-        message: "pull_request_target workflow has write permissions",
+        message: "pull_request_target job has write permissions",
         filePath: workflow.filePath,
         workflowName: workflow.name,
         jobId: job.id,
@@ -362,7 +392,12 @@ function addRiskFindings(
       });
     }
 
-    if (current.contents === "write" && !inference.detected.release && result.recommended.permissions.contents !== "write") {
+    if (
+      result.current.kind !== "write-all" &&
+      current.contents === "write" &&
+      !inference.detected.release &&
+      result.recommended.permissions.contents !== "write"
+    ) {
       findings.push({
         id: "pull-request-target.contents-write",
         severity: "high",
@@ -613,6 +648,83 @@ function sortFindings(findings: Finding[]): Finding[] {
       (a.jobId ?? "").localeCompare(b.jobId ?? "") ||
       a.id.localeCompare(b.id)
   );
+}
+
+function decorateFinding(finding: Finding, workflow: ParsedWorkflow, job?: ParsedJob): Finding {
+  return withFindingCategory({
+    ...finding,
+    location: finding.location ?? sourceLocationForFinding(finding, workflow, job)
+  });
+}
+
+function sourceLocationForFinding(
+  finding: Finding,
+  workflow: ParsedWorkflow,
+  providedJob?: ParsedJob
+): SourceLocation | undefined {
+  const job = providedJob ?? workflow.jobs.find((candidate) => candidate.id === finding.jobId);
+
+  if (
+    finding.id === "permissions.workflow-write-all" ||
+    finding.id === "permissions.workflow-write-should-be-job-level"
+  ) {
+    return workflow.permissionsLocation ?? workflow.location;
+  }
+
+  if (finding.id === "permissions.unknown-scope" && finding.scope) {
+    return job?.permissionLocations?.[finding.scope] ?? workflow.permissionLocations?.[finding.scope];
+  }
+
+  if (finding.id === "pull-request-target.checkout-head-with-write") {
+    return job?.steps.find(checksOutPullRequestHeadStep)?.location ?? job?.location;
+  }
+
+  if (finding.id === "pull-request-target.write-permissions") {
+    return declaredPermissionLocation(workflow, job) ?? workflow.triggerLocation ?? job?.location;
+  }
+
+  if (finding.id === "rules.unknown-third-party-action") {
+    return (
+      job?.steps.find((step) => {
+        const uses = normalizeUses(step.uses);
+        return Boolean(uses && isUnknownThirdPartyAction(uses));
+      })?.location ?? job?.location
+    );
+  }
+
+  if (finding.id === "rules.reusable-workflow-not-inferred" || finding.id === "permissions.missing-explicit") {
+    return job?.location ?? workflow.location;
+  }
+
+  if (finding.scope) {
+    return declaredPermissionLocation(workflow, job, finding.scope);
+  }
+
+  if (finding.id.startsWith("permissions.") || finding.id === "pull-request-target.contents-write") {
+    return declaredPermissionLocation(workflow, job) ?? job?.location ?? workflow.location;
+  }
+
+  return job?.location ?? workflow.location;
+}
+
+function declaredPermissionLocation(
+  workflow: ParsedWorkflow,
+  job: ParsedJob | undefined,
+  scope?: string
+): SourceLocation | undefined {
+  if (job && job.permissions.kind !== "missing") {
+    return (scope ? job.permissionLocations?.[scope] : undefined) ?? job.permissionsLocation ?? job.location;
+  }
+
+  if (workflow.permissions.kind !== "missing") {
+    return (
+      (scope ? workflow.permissionLocations?.[scope] : undefined) ??
+      workflow.permissionsLocation ??
+      workflow.location
+    );
+  }
+
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -4,9 +4,9 @@ Use this as a practical checklist for a public Permissio launch.
 
 - [x] Create GitHub repo.
 - [x] Replace placeholder repo URLs.
-- [ ] Publish npm package.
-- [ ] Add repo topics.
-- [ ] Record terminal demo GIF or screenshot.
+- [x] Publish npm package.
+- [x] Add repo topics.
+- [x] Record terminal demo GIF or screenshot.
 - [ ] Post Show HN.
 - [ ] Post to focused Reddit communities.
 - [ ] Post to X, LinkedIn, Bluesky, and relevant Discords.

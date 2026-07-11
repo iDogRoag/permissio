@@ -12,14 +12,16 @@ export function jobPushesGhcr(job: ParsedJob): boolean {
 }
 
 export function checksOutPullRequestHead(job: ParsedJob): boolean {
-  return job.steps.some((step) => {
-    if (normalizeUses(step.uses) !== "actions/checkout") {
-      return false;
-    }
+  return job.steps.some(checksOutPullRequestHeadStep);
+}
 
-    const text = lower(JSON.stringify(step.with ?? {}));
-    return text.includes("pull_request.head") || text.includes("github.head_ref") || text.includes("refs/pull");
-  });
+export function checksOutPullRequestHeadStep(step: ParsedStep): boolean {
+  if (normalizeUses(step.uses) !== "actions/checkout") {
+    return false;
+  }
+
+  const text = lower(JSON.stringify(step.with ?? {}));
+  return text.includes("pull_request.head") || text.includes("github.head_ref") || text.includes("refs/pull");
 }
 
 export function isKnownCloudAuth(uses: string, text: string): boolean {

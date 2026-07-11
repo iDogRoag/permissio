@@ -8,11 +8,12 @@ import { scanPath } from "./index.js";
 import { renderHtml } from "./reporters/html.js";
 import { renderJson } from "./reporters/json.js";
 import { renderMarkdown } from "./reporters/markdown.js";
+import { renderSarif } from "./reporters/sarif.js";
 import { renderTable } from "./reporters/table.js";
 import { withBadge } from "./score.js";
 import type { ScanReport } from "./types.js";
 
-type Format = "table" | "json" | "markdown" | "html";
+type Format = "table" | "json" | "markdown" | "html" | "sarif";
 type FailOn = "none" | "high" | "changes";
 
 interface CheckOptions {
@@ -32,8 +33,8 @@ interface Io {
   writeErr: (value: string) => void;
 }
 
-const validFormats = new Set(["table", "json", "markdown", "html"]);
-const validDemoFormats = new Set(["table", "json", "markdown", "html"]);
+const validFormats = new Set(["table", "json", "markdown", "html", "sarif"]);
+const validDemoFormats = new Set(["table", "json", "markdown", "html", "sarif"]);
 const validFailOn = new Set(["none", "high", "changes"]);
 const version = readPackageVersion();
 
@@ -54,7 +55,7 @@ export async function runCli(argv = process.argv.slice(2), io: Io = defaultIo())
   program
     .command("check [path]")
     .description("Scan GitHub Actions workflows in a directory.")
-    .option("--format <format>", "Output format: table, json, markdown, or html", "table")
+    .option("--format <format>", "Output format: table, json, markdown, html, or sarif", "table")
     .option("--fail-on <policy>", "Exit 1 on high findings or recommended changes: none, high, changes", "none")
     .option("--show-snippets", "Show copy-paste YAML snippets for each job", false)
     .option("--include <glob>", "Optional extra workflow glob", collect, [])
@@ -69,7 +70,7 @@ export async function runCli(argv = process.argv.slice(2), io: Io = defaultIo())
   program
     .command("demo")
     .description("Scan a bundled risky workflow example.")
-    .option("--format <format>", "Output format: table, json, markdown, or html", "table")
+    .option("--format <format>", "Output format: table, json, markdown, html, or sarif", "table")
     .option("--show-snippets", "Show copy-paste YAML snippets for each job", false)
     .option("--output <file>", "Write report output to a file")
     .option("--badge", "Print badge Markdown after the summary", false)
@@ -195,6 +196,10 @@ function renderReport(report: ScanReport, options: CheckOptions): string {
 
   if (options.format === "html") {
     return renderHtml(report);
+  }
+
+  if (options.format === "sarif") {
+    return renderSarif(report);
   }
 
   return renderTable(report, { showSnippets: options.showSnippets, quiet: options.quiet, badge: options.badge });

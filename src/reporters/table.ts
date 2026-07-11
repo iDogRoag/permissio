@@ -1,5 +1,6 @@
 import pc from "picocolors";
-import type { Finding, JobResult, ScanReport } from "../types.js";
+import type { Finding, JobResult, PermissionScore, ScanReport } from "../types.js";
+import { formatFindingLocation } from "./location.js";
 
 export interface TableReporterOptions {
   showSnippets?: boolean;
@@ -17,7 +18,7 @@ export function renderTable(report: ScanReport, options: TableReporterOptions = 
   if (!options.quiet) {
     lines.push(pc.bold("Permissio"));
     lines.push("");
-    lines.push(`Permission score ${scoreColor(report.score.value)} out of 100 (${report.score.label})`);
+    lines.push(formatScore(report.score));
     lines.push(`Workflows scanned ${report.summary.workflowsScanned}`);
     lines.push(`Jobs scanned ${report.summary.jobsScanned}`);
     lines.push(`Jobs with write-all ${report.summary.jobsWithWriteAll}`);
@@ -33,11 +34,16 @@ export function renderTable(report: ScanReport, options: TableReporterOptions = 
     lines.push("");
   }
 
-  if (report.workflows.length === 0) {
+  if (report.workflows.length === 0 && report.findings.length === 0) {
     lines.push("No GitHub Actions workflows found.");
     lines.push("Permissio scans .github/workflows by default.");
     lines.push("Try permissio demo to see an example report.");
     return `${lines.join("\n")}\n`;
+  }
+
+  if (report.workflows.length === 0) {
+    lines.push("No valid GitHub Actions workflows could be analyzed.");
+    lines.push("");
   }
 
   if (report.findings.length > 0) {
@@ -80,7 +86,7 @@ export function renderTable(report: ScanReport, options: TableReporterOptions = 
 }
 
 function formatFinding(finding: Finding): string {
-  const location = [finding.filePath, finding.jobId].filter(Boolean).join(" ");
+  const location = formatFindingLocation(finding);
   return `${finding.message}${location ? ` (${location})` : ""}`;
 }
 
@@ -91,7 +97,7 @@ function renderQuietFindings(report: ScanReport): string {
 
   return `${report.findings
     .map((finding) => {
-      const location = [finding.filePath, finding.jobId].filter(Boolean).join(" ");
+      const location = formatFindingLocation(finding);
       return `${finding.severity} ${finding.message}${location ? ` (${location})` : ""}`;
     })
     .join("\n")}\n`;
@@ -116,4 +122,12 @@ function scoreColor(value: number): string {
   }
 
   return pc.red(text);
+}
+
+function formatScore(score: PermissionScore): string {
+  if (score.status === "incomplete") {
+    return pc.yellow("Permission score unavailable (scan incomplete)");
+  }
+
+  return `Permission score ${scoreColor(score.value)} out of 100 (${score.label})`;
 }

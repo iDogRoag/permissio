@@ -26,6 +26,55 @@ describe("cli", () => {
     expect(parsed.summary.filesScanned).toBe(1);
     expect(parsed.workflows[0].jobs).toHaveLength(2);
     expect(parsed.workflows[0].filePath).toBe("basic.yml");
+    expect(parsed.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "permissions.missing-explicit",
+          location: expect.objectContaining({ startLine: expect.any(Number), startColumn: expect.any(Number) })
+        })
+      ])
+    );
+  });
+
+  it("prints SARIF output for GitHub code scanning", async () => {
+    const output: string[] = [];
+    const code = await runCli(["check", fixtures, "--include", "risky.yml", "--format", "sarif"], {
+      cwd: process.cwd(),
+      writeOut: (value) => output.push(value),
+      writeErr: (value) => output.push(value)
+    });
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(output.join(""));
+    expect(parsed.version).toBe("2.1.0");
+    expect(parsed.runs[0].tool.driver.name).toBe("permissio");
+    expect(parsed.runs[0].tool.driver.rules).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "permissions.workflow-write-all",
+          defaultConfiguration: { level: "error" }
+        })
+      ])
+    );
+    expect(parsed.runs[0].results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ruleId: "permissions.workflow-write-all",
+          level: "error",
+          locations: [
+            expect.objectContaining({
+              physicalLocation: expect.objectContaining({
+                artifactLocation: { uri: "risky.yml" },
+                region: { startLine: 6, startColumn: 1 }
+              })
+            })
+          ],
+          partialFingerprints: {
+            primaryLocationLineHash: expect.stringMatching(/^[a-f0-9]{64}$/)
+          }
+        })
+      ])
+    );
   });
 
   it("returns exit code 1 when fail-on high is triggered", async () => {
@@ -38,6 +87,7 @@ describe("cli", () => {
 
     expect(code).toBe(1);
     expect(output.join("")).toContain("pull_request_target");
+    expect(output.join("")).toContain("risky.yml:6:1");
   });
 
   it("returns exit code 2 for invalid CLI input", async () => {
@@ -116,6 +166,24 @@ describe("cli", () => {
     }
   });
 
+  it("shows parse failures when no valid workflows can be analyzed", async () => {
+    const output: string[] = [];
+    const code = await runCli(["check", fixtures, "--include", "invalid.yml"], {
+      cwd: process.cwd(),
+      writeOut: (value) => output.push(value),
+      writeErr: (value) => output.push(value)
+    });
+
+    expect(code).toBe(0);
+    expect(output.join("")).toContain("Permission score unavailable (scan incomplete)");
+    expect(output.join("")).toContain("No valid GitHub Actions workflows could be analyzed.");
+    expect(output.join("")).toContain("Workflow YAML could not be parsed (invalid.yml:2:10)");
+
+    const markdown = await runCliOutput(["check", fixtures, "--include", "invalid.yml", "--format", "markdown"]);
+    expect(markdown).toContain("**Permission score:** unavailable (scan incomplete)");
+    expect(markdown).toContain("Workflow YAML could not be parsed (invalid.yml:2:10)");
+  });
+
   it("renders valid JSON through the reporter", async () => {
     const report = await scanPath(fixtures, { include: ["basic.yml"] });
     const parsed = JSON.parse(renderJson(report));
@@ -144,7 +212,7 @@ describe("cli", () => {
         cwd: process.cwd()
       });
 
-      expect(stdout.trim()).toBe("0.2.2");
+      expect(stdout.trim()).toBe("0.3.0");
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
@@ -159,6 +227,16 @@ describe("cli", () => {
     });
 
     expect(code).toBe(0);
-    expect(output.join("").trim()).toBe("0.2.2");
+    expect(output.join("").trim()).toBe("0.3.0");
   });
 });
+
+async function runCliOutput(argv: string[]): Promise<string> {
+  const output: string[] = [];
+  await runCli(argv, {
+    cwd: process.cwd(),
+    writeOut: (value) => output.push(value),
+    writeErr: (value) => output.push(value)
+  });
+  return output.join("");
+}

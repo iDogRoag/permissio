@@ -30,6 +30,7 @@ npm run pack:check
 Permission inference lives in `src/rules.ts`.
 Reusable action and command pattern helpers live in `src/action-patterns.ts`.
 Findings are normalized through `src/findings.ts`, and score penalties live in `src/score.ts`.
+YAML source locations are captured in `src/parser.ts` and attached to findings in `src/rules.ts`.
 
 Rules should be deterministic, explainable, and conservative.
 Prefer high-confidence matches for known actions and medium or low confidence for text-pattern inference.
@@ -60,6 +61,7 @@ Use realistic GitHub Actions YAML, but avoid secrets or private repo details.
 Reporters live in `src/reporters`.
 Use the shared `ScanReport` shape from `src/types.ts`.
 Keep output deterministic so snapshots, docs, and CI logs stay stable.
+For SARIF changes, verify exact locations, stable fingerprints, and GitHub-compatible SARIF 2.1.0 fields.
 
 ## How to write a good finding message
 
